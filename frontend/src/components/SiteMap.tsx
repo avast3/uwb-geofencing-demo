@@ -36,6 +36,9 @@ interface SiteMapProps {
   locked?: boolean;
   /** Ground-truth worker position; omitted/undefined in ZONE SETUP MODE. */
   workerPosition?: MetrePoint | null;
+  /** Estimated UWB position; only rendered when showEstimate is true. */
+  estimatedPosition?: MetrePoint | null;
+  showEstimate?: boolean;
   onZoneCreate: (draft: ZoneDraft) => void;
   onZoneUpdate: (id: string, patch: ZonePatch) => void;
   onZoneSelect: (id: string | null) => void;
@@ -140,6 +143,8 @@ export default function SiteMap({
   tool,
   locked = false,
   workerPosition = null,
+  estimatedPosition = null,
+  showEstimate = false,
   onZoneCreate,
   onZoneUpdate,
   onZoneSelect,
@@ -403,7 +408,22 @@ export default function SiteMap({
 
       {/* Worker drawn last so it's always visible above anchors/zones */}
       {workerPosition && <WorkerComp position={workerPosition} />}
+
+      {/* Debug: estimated UWB position, separate from the ground-truth glyph */}
+      {showEstimate && estimatedPosition && <EstimateMarker position={estimatedPosition} />}
     </svg>
+  );
+}
+
+function EstimateMarker({ position }: { position: MetrePoint }) {
+  const { x, y } = metresToPixels(position.x, position.y);
+  const r = 7;
+  return (
+    <g className="estimate-marker">
+      <circle cx={x} cy={y} r={r + 3} className="estimate-marker-ring" />
+      <line x1={x - r} y1={y} x2={x + r} y2={y} className="estimate-marker-cross" />
+      <line x1={x} y1={y - r} x2={x} y2={y + r} className="estimate-marker-cross" />
+    </g>
   );
 }
 

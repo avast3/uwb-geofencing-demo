@@ -216,6 +216,19 @@
   pointer-events: none;
 }
 
+.estimate-marker-ring {
+  fill: none;
+  stroke: #22d3ee;
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+  opacity: 0.8;
+}
+
+.estimate-marker-cross {
+  stroke: #22d3ee;
+  stroke-width: 2;
+}
+
 .controls-hint {
   position: absolute;
   bottom: 8px;

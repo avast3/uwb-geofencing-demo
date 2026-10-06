@@ -7,6 +7,7 @@ import * as api from "./services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
 import type { MetrePoint } from "./utils/coordinateTransform";
 import { computeAnchorRanges } from "./utils/ranging";
+import { estimatePosition } from "./utils/positioning";
 import type { AppMode, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
 import "./App.css";
 
@@ -39,6 +40,7 @@ export default function App() {
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null); // null = checking
   const [workerPosition, setWorkerPosition] = useState<MetrePoint>(WORKER_START_POSITION);
   const [noiseEnabled, setNoiseEnabled] = useState(false); // OFF by default, see design spec
+  const [showEstimate, setShowEstimate] = useState(false);
   const [, setRangeSampleTick] = useState(0); // write-only: just forces periodic re-renders below
   const zoneCounterRef = useRef(0);
 
@@ -50,6 +52,13 @@ export default function App() {
   // simulated ranges should too.
   const anchorRanges =
     mode === "live" ? computeAnchorRanges(workerPosition, ANCHORS, ALL_ANCHOR_IDS, noiseEnabled) : [];
+  // Reconstructed from anchorRanges only — never from workerPosition
+  // directly. This is the estimate a real geofence check would compare
+  // against zones, not the ground truth.
+  const estimatedPosition = mode === "live" ? estimatePosition(ANCHORS, anchorRanges) : null;
+  const positionErrorM = estimatedPosition
+    ? Math.hypot(workerPosition.x - estimatedPosition.x, workerPosition.y - estimatedPosition.y)
+    : null;
 
   useEffect(() => {
     if (mode !== "live") return;
@@ -168,6 +177,8 @@ export default function App() {
             tool={mode === "live" ? "select" : tool}
             locked={mode === "live"}
             workerPosition={mode === "live" ? workerPosition : null}
+            estimatedPosition={estimatedPosition}
+            showEstimate={showEstimate}
             onZoneCreate={handleZoneCreate}
             onZoneUpdate={handleZoneUpdate}
             onZoneSelect={setSelectedZoneId}
@@ -186,10 +197,10 @@ export default function App() {
           <div className="properties-panel">
             <h3>LIVE SIMULATION MODE</h3>
             <p className="properties-empty">
-              Multilateration and live SAFE/WARNING/BREACH status are added
-              in later build stages. For now this mode locks the zone
-              geometry, lets you drive TAG-001 around the site, and
-              simulates the raw UWB range to each anchor.
+              Live SAFE/WARNING/BREACH status is added in a later build
+              stage. For now this mode locks the zone geometry, lets you
+              drive TAG-001 around the site, and reconstructs an estimated
+              position from simulated UWB ranges via multilateration.
             </p>
             <div className="properties-row">
               <span>Ground truth</span>
@@ -197,12 +208,35 @@ export default function App() {
                 X {workerPosition.x.toFixed(2)} m, Y {workerPosition.y.toFixed(2)} m
               </span>
             </div>
+            <div className="properties-row">
+              <span>Estimated (UWB)</span>
+              <span className="properties-value">
+                {estimatedPosition
+                  ? `X ${estimatedPosition.x.toFixed(2)} m, Y ${estimatedPosition.y.toFixed(2)} m`
+                  : "POSITION UNAVAILABLE"}
+              </span>
+            </div>
+            {positionErrorM !== null && (
+              <div className="properties-row">
+                <span>Position error</span>
+                <span className="properties-value">{(positionErrorM * 100).toFixed(1)} cm</span>
+              </div>
+            )}
+
             <label className="properties-row">
               <span>UWB Noise</span>
               <input
                 type="checkbox"
                 checked={noiseEnabled}
                 onChange={(e) => setNoiseEnabled(e.target.checked)}
+              />
+            </label>
+            <label className="properties-row">
+              <span>Show UWB Estimate</span>
+              <input
+                type="checkbox"
+                checked={showEstimate}
+                onChange={(e) => setShowEstimate(e.target.checked)}
               />
             </label>
 
