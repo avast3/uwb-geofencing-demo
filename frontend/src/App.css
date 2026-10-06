@@ -351,6 +351,22 @@
   font-weight: 600;
 }
 
+.geofence-safe {
+  color: #22c55e;
+}
+
+.geofence-warning {
+  color: #f59e0b;
+}
+
+.geofence-breach {
+  color: #ef4444;
+}
+
+.geofence-pending {
+  color: #64748b;
+}
+
 .properties-row input[type="text"] {
   background: #0f172a;
   border: 1px solid #2c3a56;

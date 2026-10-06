@@ -60,3 +60,15 @@ export type ZoneDraft =
 // fields relevant to the zone's actual shape.
 export type ZonePatch = Partial<Omit<RectangleZone, "id" | "shape">> &
   Partial<Omit<CircleZone, "id" | "shape">>;
+
+// The backend's authoritative geofence verdict for one position update.
+export type SafetyState = "SAFE" | "WARNING" | "BREACH";
+
+export interface PositionResult {
+  tagId: string;
+  /** null only when degraded is true — never a silent SAFE. */
+  state: SafetyState | null;
+  zoneId: string | null;
+  anchorsOnline: number;
+  degraded: boolean;
+}

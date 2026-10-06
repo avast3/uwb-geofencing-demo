@@ -6,7 +6,7 @@ stored, so the backend never holds a degenerate zone (inverted bounds,
 non-positive radius, etc).
 """
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -72,3 +72,24 @@ class CircleZone(CircleZoneIn):
 
 
 Zone = Annotated[Union[RectangleZone, CircleZone], Field(discriminator="shape")]
+
+
+class PositionUpdate(BaseModel):
+    """Estimated UWB position reported by the frontend — never the
+    ground-truth worker position, per the project's core principle."""
+
+    tag_id: str
+    x: float
+    y: float
+    anchors_active: List[str] = Field(default_factory=list)
+
+
+SafetyState = Literal["SAFE", "WARNING", "BREACH"]
+
+
+class PositionResult(BaseModel):
+    tag_id: str
+    state: Optional[SafetyState] = None
+    zone_id: Optional[str] = None
+    anchors_online: int
+    degraded: bool

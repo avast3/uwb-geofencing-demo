@@ -8,10 +8,12 @@ import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coord
 import type { MetrePoint } from "./utils/coordinateTransform";
 import { computeAnchorRanges } from "./utils/ranging";
 import { estimatePosition } from "./utils/positioning";
-import type { AppMode, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
+import type { AppMode, PositionResult, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
 import "./App.css";
 
+const TAG_ID = "TAG-001";
 const HEALTH_POLL_MS = 4000;
+const POSITION_POLL_MS = 200; // ~5/sec, well within the spec's "~10x/sec" guidance
 const WORKER_SPEED_MPS = 2.5;
 const WORKER_START_POSITION: MetrePoint = { x: SITE_WIDTH_M / 2, y: SITE_HEIGHT_M / 2 };
 // Anchor on/off toggling is a later stage; for now every anchor is always
@@ -41,6 +43,7 @@ export default function App() {
   const [workerPosition, setWorkerPosition] = useState<MetrePoint>(WORKER_START_POSITION);
   const [noiseEnabled, setNoiseEnabled] = useState(false); // OFF by default, see design spec
   const [showEstimate, setShowEstimate] = useState(false);
+  const [geofenceResult, setGeofenceResult] = useState<PositionResult | null>(null);
   const [, setRangeSampleTick] = useState(0); // write-only: just forces periodic re-renders below
   const zoneCounterRef = useRef(0);
 
@@ -64,6 +67,34 @@ export default function App() {
     if (mode !== "live") return;
     const interval = setInterval(() => setRangeSampleTick((t) => t + 1), 250);
     return () => clearInterval(interval);
+  }, [mode]);
+
+  // Posts the estimated position to the backend's authoritative geofence
+  // check. Reads the latest estimate via a ref (updated every render, see
+  // below) rather than depending on it directly, so this interval's
+  // identity — and therefore its cadence — doesn't reset every time the
+  // estimate changes, which during movement is every frame.
+  const estimatedPositionRef = useRef(estimatedPosition);
+  useEffect(() => {
+    estimatedPositionRef.current = estimatedPosition;
+  });
+
+  useEffect(() => {
+    if (mode !== "live") {
+      setGeofenceResult(null);
+      return;
+    }
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      const pos = estimatedPositionRef.current;
+      if (!pos) return;
+      const result = await api.postPosition(TAG_ID, pos.x, pos.y, Array.from(ALL_ANCHOR_IDS));
+      if (!cancelled) setGeofenceResult(result);
+    }, POSITION_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [mode]);
 
   // Initial load from the backend (the authoritative zone store) and a
@@ -197,11 +228,22 @@ export default function App() {
           <div className="properties-panel">
             <h3>LIVE SIMULATION MODE</h3>
             <p className="properties-empty">
-              Live SAFE/WARNING/BREACH status is added in a later build
-              stage. For now this mode locks the zone geometry, lets you
-              drive TAG-001 around the site, and reconstructs an estimated
-              position from simulated UWB ranges via multilateration.
+              Event logging and the simulated wearable LED are added in
+              later build stages. For now this mode locks the zone
+              geometry, lets you drive TAG-001 around the site, and sends
+              the UWB-estimated position to the backend for the
+              authoritative SAFE/WARNING/BREACH check.
             </p>
+            <div className="properties-row">
+              <span>Geofence</span>
+              <span className={`properties-value geofence-${(geofenceResult?.state ?? "pending").toLowerCase()}`}>
+                {geofenceResult
+                  ? geofenceResult.degraded
+                    ? "SYSTEM DEGRADED"
+                    : (geofenceResult.state ?? "—") + (geofenceResult.zoneId ? ` (${geofenceResult.zoneId})` : "")
+                  : "—"}
+              </span>
+            </div>
             <div className="properties-row">
               <span>Ground truth</span>
               <span className="properties-value">

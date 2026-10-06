@@ -3,7 +3,7 @@
 // module is the only place that knows the backend's snake_case JSON shape
 // and converts it to/from the frontend's camelCase Zone type.
 
-import type { Zone, ZoneDraft, ZoneType } from "../types";
+import type { PositionResult, SafetyState, Zone, ZoneDraft, ZoneType } from "../types";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -140,4 +140,34 @@ export async function deleteZone(zoneId: string): Promise<boolean> {
 export async function clearZones(): Promise<boolean> {
   const result = await request<{ cleared: boolean }>("/api/zones", { method: "DELETE" });
   return result?.cleared === true;
+}
+
+interface BackendPositionResult {
+  tag_id: string;
+  state: SafetyState | null;
+  zone_id: string | null;
+  anchors_online: number;
+  degraded: boolean;
+}
+
+// Sends the frontend's estimated UWB position (never ground truth) and
+// returns the backend's authoritative SAFE/WARNING/BREACH verdict.
+export async function postPosition(
+  tagId: string,
+  x: number,
+  y: number,
+  anchorsActive: string[]
+): Promise<PositionResult | null> {
+  const result = await request<BackendPositionResult>("/api/position", {
+    method: "POST",
+    body: JSON.stringify({ tag_id: tagId, x, y, anchors_active: anchorsActive }),
+  });
+  if (!result) return null;
+  return {
+    tagId: result.tag_id,
+    state: result.state,
+    zoneId: result.zone_id,
+    anchorsOnline: result.anchors_online,
+    degraded: result.degraded,
+  };
 }
