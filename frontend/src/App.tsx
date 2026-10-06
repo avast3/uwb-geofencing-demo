@@ -4,6 +4,7 @@ import ZoneToolbar from "./components/ZoneToolbar";
 import ZoneProperties from "./components/ZoneProperties";
 import Controls from "./components/Controls";
 import StatusPanel from "./components/StatusPanel";
+import SystemStatus from "./components/SystemStatus";
 import EventLog from "./components/EventLog";
 import * as api from "./services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
@@ -19,9 +20,6 @@ const POSITION_POLL_MS = 200; // ~5/sec, well within the spec's "~10x/sec" guida
 const EVENTS_POLL_MS = 1000;
 const WORKER_SPEED_MPS = 2.5;
 const WORKER_START_POSITION: MetrePoint = { x: SITE_WIDTH_M / 2, y: SITE_HEIGHT_M / 2 };
-// Anchor on/off toggling is a later stage; for now every anchor is always
-// active, but ranging.ts already takes an explicit active set so that
-// stage only has to add the toggle UI, not change this call.
 const ALL_ANCHOR_IDS = new Set(ANCHORS.map((a) => a.id));
 
 // Converts a running counter into A, B, C, ... Z, AA, AB, ... used for the
@@ -37,6 +35,11 @@ function letterFromIndex(n: number): string {
   return s;
 }
 
+function formatClockTime(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 export default function App() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
@@ -48,6 +51,8 @@ export default function App() {
   const [showEstimate, setShowEstimate] = useState(false);
   const [geofenceResult, setGeofenceResult] = useState<PositionResult | null>(null);
   const [events, setEvents] = useState<LogEvent[]>([]);
+  const [onlineAnchorIds, setOnlineAnchorIds] = useState<Set<string>>(() => new Set(ALL_ANCHOR_IDS));
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [, setRangeSampleTick] = useState(0); // write-only: just forces periodic re-renders below
   const zoneCounterRef = useRef(0);
 
@@ -58,7 +63,7 @@ export default function App() {
   // keeps re-measuring even while the tag is stationary, so the
   // simulated ranges should too.
   const anchorRanges =
-    mode === "live" ? computeAnchorRanges(workerPosition, ANCHORS, ALL_ANCHOR_IDS, noiseEnabled) : [];
+    mode === "live" ? computeAnchorRanges(workerPosition, ANCHORS, onlineAnchorIds, noiseEnabled) : [];
   // Reconstructed from anchorRanges only — never from workerPosition
   // directly. This is the estimate a real geofence check would compare
   // against zones, not the ground truth.
@@ -74,13 +79,16 @@ export default function App() {
   }, [mode]);
 
   // Posts the estimated position to the backend's authoritative geofence
-  // check. Reads the latest estimate via a ref (updated every render, see
-  // below) rather than depending on it directly, so this interval's
-  // identity — and therefore its cadence — doesn't reset every time the
-  // estimate changes, which during movement is every frame.
+  // check. Reads the latest estimate/online-anchor-set via refs (updated
+  // every render, see below) rather than depending on them directly, so
+  // this interval's identity — and therefore its cadence — doesn't reset
+  // every time either changes, which during movement/toggling can be
+  // every frame.
   const estimatedPositionRef = useRef(estimatedPosition);
+  const onlineAnchorIdsRef = useRef(onlineAnchorIds);
   useEffect(() => {
     estimatedPositionRef.current = estimatedPosition;
+    onlineAnchorIdsRef.current = onlineAnchorIds;
   });
 
   useEffect(() => {
@@ -91,9 +99,27 @@ export default function App() {
     let cancelled = false;
     const interval = setInterval(async () => {
       const pos = estimatedPositionRef.current;
-      if (!pos) return;
-      const result = await api.postPosition(TAG_ID, pos.x, pos.y, Array.from(ALL_ANCHOR_IDS));
-      if (!cancelled) setGeofenceResult(result);
+      const activeIds = Array.from(onlineAnchorIdsRef.current);
+      if (!pos) {
+        // Fewer than 3 online anchors: no estimate was even computable.
+        // Fail visible, not fail silent — show degraded immediately
+        // rather than leaving the last known SAFE/WARNING/BREACH on
+        // screen, and don't bother the backend with a meaningless x/y.
+        if (!cancelled) {
+          setGeofenceResult({
+            tagId: TAG_ID,
+            state: null,
+            zoneId: null,
+            anchorsOnline: activeIds.length,
+            degraded: true,
+          });
+        }
+        return;
+      }
+      const result = await api.postPosition(TAG_ID, pos.x, pos.y, activeIds);
+      if (cancelled) return;
+      setGeofenceResult(result);
+      if (result) setLastUpdate(formatClockTime(new Date()));
     }, POSITION_POLL_MS);
     return () => {
       cancelled = true;
@@ -191,6 +217,7 @@ export default function App() {
 
   function handleStartSimulation() {
     setWorkerPosition(WORKER_START_POSITION);
+    setOnlineAnchorIds(new Set(ALL_ANCHOR_IDS));
     setMode("live");
   }
 
@@ -198,6 +225,17 @@ export default function App() {
     setEvents([]);
     void api.clearEvents();
   }
+
+  function handleAnchorToggle(anchorId: string) {
+    setOnlineAnchorIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(anchorId)) next.delete(anchorId);
+      else next.add(anchorId);
+      return next;
+    });
+  }
+
+  const lastMessage = events.length > 0 ? events[events.length - 1].message : null;
 
   const backendLabel =
     backendOnline === null ? "BACKEND: CHECKING..." : backendOnline ? "BACKEND: CONNECTED" : "BACKEND: OFFLINE";
@@ -237,6 +275,8 @@ export default function App() {
             workerPosition={mode === "live" ? workerPosition : null}
             estimatedPosition={estimatedPosition}
             showEstimate={showEstimate}
+            onlineAnchorIds={onlineAnchorIds}
+            onAnchorToggle={mode === "live" ? handleAnchorToggle : undefined}
             onZoneCreate={handleZoneCreate}
             onZoneUpdate={handleZoneUpdate}
             onZoneSelect={setSelectedZoneId}
@@ -258,6 +298,15 @@ export default function App() {
               state={geofenceResult?.state ?? null}
               zoneId={geofenceResult?.zoneId ?? null}
               degraded={geofenceResult?.degraded ?? false}
+            />
+
+            <SystemStatus
+              backendOnline={backendOnline}
+              anchorsOnlineCount={onlineAnchorIds.size}
+              totalAnchors={ANCHORS.length}
+              gatewayOnline={onlineAnchorIds.has("A1")}
+              lastUpdate={lastUpdate}
+              lastMessage={lastMessage}
             />
 
             <div className="properties-panel">

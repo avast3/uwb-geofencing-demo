@@ -39,6 +39,10 @@ interface SiteMapProps {
   /** Estimated UWB position; only rendered when showEstimate is true. */
   estimatedPosition?: MetrePoint | null;
   showEstimate?: boolean;
+  /** Which anchor ids are currently online. Defaults to "all". */
+  onlineAnchorIds?: ReadonlySet<string>;
+  /** Only provided in LIVE SIMULATION MODE — clicking an anchor toggles it. */
+  onAnchorToggle?: (anchorId: string) => void;
   onZoneCreate: (draft: ZoneDraft) => void;
   onZoneUpdate: (id: string, patch: ZonePatch) => void;
   onZoneSelect: (id: string | null) => void;
@@ -137,6 +141,8 @@ function translateCircle(zone: CircleZone, dx: number, dy: number): ZonePatch {
 // zones, and owns all pointer-event drag logic for drawing / selecting /
 // moving / resizing zones. Geometry math lives here; naming/ID assignment
 // and the zones array itself live in the parent (App).
+const DEFAULT_ONLINE_ANCHOR_IDS = new Set(ANCHORS.map((a) => a.id));
+
 export default function SiteMap({
   zones,
   selectedZoneId,
@@ -145,6 +151,8 @@ export default function SiteMap({
   workerPosition = null,
   estimatedPosition = null,
   showEstimate = false,
+  onlineAnchorIds = DEFAULT_ONLINE_ANCHOR_IDS,
+  onAnchorToggle,
   onZoneCreate,
   onZoneUpdate,
   onZoneSelect,
@@ -403,7 +411,7 @@ export default function SiteMap({
 
       {/* Anchors on top */}
       {ANCHORS.map((a) => (
-        <Anchor key={a.id} anchor={a} />
+        <Anchor key={a.id} anchor={a} online={onlineAnchorIds.has(a.id)} onToggle={onAnchorToggle} />
       ))}
 
       {/* Worker drawn last so it's always visible above anchors/zones */}
