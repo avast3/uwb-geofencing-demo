@@ -4,14 +4,19 @@ import ZoneToolbar from "./components/ZoneToolbar";
 import ZoneProperties from "./components/ZoneProperties";
 import Controls from "./components/Controls";
 import * as api from "./services/api";
-import { SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
+import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
 import type { MetrePoint } from "./utils/coordinateTransform";
+import { computeAnchorRanges } from "./utils/ranging";
 import type { AppMode, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
 import "./App.css";
 
 const HEALTH_POLL_MS = 4000;
 const WORKER_SPEED_MPS = 2.5;
 const WORKER_START_POSITION: MetrePoint = { x: SITE_WIDTH_M / 2, y: SITE_HEIGHT_M / 2 };
+// Anchor on/off toggling is a later stage; for now every anchor is always
+// active, but ranging.ts already takes an explicit active set so that
+// stage only has to add the toggle UI, not change this call.
+const ALL_ANCHOR_IDS = new Set(ANCHORS.map((a) => a.id));
 
 // Converts a running counter into A, B, C, ... Z, AA, AB, ... used for the
 // default human-readable zone name (the zone's actual id is assigned by
@@ -33,10 +38,24 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>("setup");
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null); // null = checking
   const [workerPosition, setWorkerPosition] = useState<MetrePoint>(WORKER_START_POSITION);
+  const [noiseEnabled, setNoiseEnabled] = useState(false); // OFF by default, see design spec
+  const [, setRangeSampleTick] = useState(0); // write-only: just forces periodic re-renders below
   const zoneCounterRef = useRef(0);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
   const hasActiveZone = zones.some((z) => z.active);
+  // Not memoized, so this recomputes on every render — including every
+  // movement frame and every rangeSampleTick below. A real UWB radio
+  // keeps re-measuring even while the tag is stationary, so the
+  // simulated ranges should too.
+  const anchorRanges =
+    mode === "live" ? computeAnchorRanges(workerPosition, ANCHORS, ALL_ANCHOR_IDS, noiseEnabled) : [];
+
+  useEffect(() => {
+    if (mode !== "live") return;
+    const interval = setInterval(() => setRangeSampleTick((t) => t + 1), 250);
+    return () => clearInterval(interval);
+  }, [mode]);
 
   // Initial load from the backend (the authoritative zone store) and a
   // periodic health poll driving the BACKEND: CONNECTED/OFFLINE indicator.
@@ -167,9 +186,10 @@ export default function App() {
           <div className="properties-panel">
             <h3>LIVE SIMULATION MODE</h3>
             <p className="properties-empty">
-              UWB ranging, multilateration and live SAFE/WARNING/BREACH status
-              are added in later build stages. For now this mode locks the
-              zone geometry and lets you drive TAG-001 around the site.
+              Multilateration and live SAFE/WARNING/BREACH status are added
+              in later build stages. For now this mode locks the zone
+              geometry, lets you drive TAG-001 around the site, and
+              simulates the raw UWB range to each anchor.
             </p>
             <div className="properties-row">
               <span>Ground truth</span>
@@ -177,6 +197,23 @@ export default function App() {
                 X {workerPosition.x.toFixed(2)} m, Y {workerPosition.y.toFixed(2)} m
               </span>
             </div>
+            <label className="properties-row">
+              <span>UWB Noise</span>
+              <input
+                type="checkbox"
+                checked={noiseEnabled}
+                onChange={(e) => setNoiseEnabled(e.target.checked)}
+              />
+            </label>
+
+            <h3 className="ranges-heading">UWB RANGES (sim.)</h3>
+            {anchorRanges.map((r) => (
+              <div className="properties-row" key={r.anchorId}>
+                <span>{r.anchorId}</span>
+                <span className="properties-value">{r.distance.toFixed(2)} m</span>
+              </div>
+            ))}
+
             <button className="toolbar-btn" onClick={() => setMode("setup")}>
               EDIT ZONES
             </button>

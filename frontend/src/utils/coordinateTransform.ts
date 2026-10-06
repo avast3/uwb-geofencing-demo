@@ -5,6 +5,8 @@
 // The site is a fixed 8m x 6m rectangle. A margin around it leaves room
 // for axis labels and metre tick marks.
 
+import type { AnchorInfo } from "../types";
+
 export const SITE_WIDTH_M = 8;
 export const SITE_HEIGHT_M = 6;
 
@@ -63,3 +65,12 @@ export function clampToSite(point: MetrePoint): MetrePoint {
 // Smallest zone dimension (metres) allowed, so an accidental click
 // doesn't create a degenerate zero-size zone.
 export const MIN_ZONE_SIZE_M = 0.2;
+
+// Fixed UWB anchor positions — the four site corners. Anchors provide
+// positioning coverage only; they never define hazard geometry.
+export const ANCHORS: AnchorInfo[] = [
+  { id: "A1", xM: 0, yM: 0, label: "Gateway" },
+  { id: "A2", xM: SITE_WIDTH_M, yM: 0 },
+  { id: "A3", xM: 0, yM: SITE_HEIGHT_M },
+  { id: "A4", xM: SITE_WIDTH_M, yM: SITE_HEIGHT_M },
+];

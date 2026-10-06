@@ -308,6 +308,12 @@
   color: #93a1b8;
 }
 
+.properties-panel h3.ranges-heading {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #26324a;
+}
+
 .properties-empty {
   font-size: 13px;
   color: #64748a;

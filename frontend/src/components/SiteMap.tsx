@@ -3,6 +3,7 @@ import Anchor from "./Anchor";
 import ZoneComp from "./Zone";
 import WorkerComp from "./Worker";
 import {
+  ANCHORS,
   MARGIN_PX,
   MIN_ZONE_SIZE_M,
   SITE_HEIGHT_M,
@@ -17,7 +18,6 @@ import {
   pixelsToMetres,
 } from "../utils/coordinateTransform";
 import type {
-  AnchorInfo,
   CircleZone,
   RectangleZone,
   ResizeHandle,
@@ -27,13 +27,6 @@ import type {
   ZonePatch,
 } from "../types";
 import type { MetrePoint } from "../utils/coordinateTransform";
-
-const ANCHORS: AnchorInfo[] = [
-  { id: "A1", xM: 0, yM: 0, label: "Gateway" },
-  { id: "A2", xM: SITE_WIDTH_M, yM: 0 },
-  { id: "A3", xM: 0, yM: SITE_HEIGHT_M },
-  { id: "A4", xM: SITE_WIDTH_M, yM: SITE_HEIGHT_M },
-];
 
 interface SiteMapProps {
   zones: Zone[];
