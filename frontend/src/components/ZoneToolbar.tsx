@@ -1,0 +1,49 @@
+import type { Tool } from "../types";
+
+interface ZoneToolbarProps {
+  tool: Tool;
+  onToolChange: (tool: Tool) => void;
+  hasSelection: boolean;
+  hasZones: boolean;
+  onDeleteSelected: () => void;
+  onClearAll: () => void;
+}
+
+export default function ZoneToolbar({
+  tool,
+  onToolChange,
+  hasSelection,
+  hasZones,
+  onDeleteSelected,
+  onClearAll,
+}: ZoneToolbarProps) {
+  return (
+    <div className="toolbar">
+      <button
+        className={tool === "select" ? "toolbar-btn active" : "toolbar-btn"}
+        onClick={() => onToolChange("select")}
+      >
+        Select / Edit
+      </button>
+      <button
+        className={tool === "rectangle" ? "toolbar-btn active" : "toolbar-btn"}
+        onClick={() => onToolChange("rectangle")}
+      >
+        Rectangle Zone
+      </button>
+      <button
+        className={tool === "circle" ? "toolbar-btn active" : "toolbar-btn"}
+        onClick={() => onToolChange("circle")}
+      >
+        Circle Zone
+      </button>
+      <span className="toolbar-divider" />
+      <button className="toolbar-btn danger" disabled={!hasSelection} onClick={onDeleteSelected}>
+        Delete Zone
+      </button>
+      <button className="toolbar-btn danger" disabled={!hasZones} onClick={onClearAll}>
+        Clear Zones
+      </button>
+    </div>
+  );
+}
