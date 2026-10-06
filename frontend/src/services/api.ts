@@ -3,7 +3,15 @@
 // module is the only place that knows the backend's snake_case JSON shape
 // and converts it to/from the frontend's camelCase Zone type.
 
-import type { PositionResult, SafetyState, Zone, ZoneDraft, ZoneType } from "../types";
+import type {
+  LogEvent,
+  PositionResult,
+  SafetyState,
+  Zone,
+  ZoneDraft,
+  ZoneTransition,
+  ZoneType,
+} from "../types";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -170,4 +178,36 @@ export async function postPosition(
     anchorsOnline: result.anchors_online,
     degraded: result.degraded,
   };
+}
+
+interface BackendEvent {
+  event_id: string;
+  timestamp: string;
+  tag_id: string;
+  zone_id: string;
+  zone_name: string;
+  transition: ZoneTransition;
+  message: string;
+}
+
+function fromBackendEvent(e: BackendEvent): LogEvent {
+  return {
+    eventId: e.event_id,
+    timestamp: e.timestamp,
+    tagId: e.tag_id,
+    zoneId: e.zone_id,
+    zoneName: e.zone_name,
+    transition: e.transition,
+    message: e.message,
+  };
+}
+
+export async function getEvents(): Promise<LogEvent[]> {
+  const result = await request<BackendEvent[]>("/api/events");
+  return (result ?? []).map(fromBackendEvent);
+}
+
+export async function clearEvents(): Promise<boolean> {
+  const result = await request<{ cleared: boolean }>("/api/events", { method: "DELETE" });
+  return result?.cleared === true;
 }

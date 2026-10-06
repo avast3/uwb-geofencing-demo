@@ -7,7 +7,7 @@ SAFE/WARNING/BREACH, per the project's core safety principle.
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 from .models import CircleZone, RectangleZone, Zone
 
@@ -27,18 +27,29 @@ def _point_in_zone(x: float, y: float, zone: Zone) -> bool:
     return point_in_circle(x, y, zone)
 
 
+def contained_zone_ids(x: float, y: float, zones: List[Zone]) -> Set[str]:
+    """All active zone_ids whose geometry currently contains this point —
+    not just the highest-priority one. A position can be inside a warning
+    zone and an exclusion zone nested within it at the same time; the
+    event system (events.py) needs that full membership set to generate
+    independent ENTERED/EXITED transitions per zone, not just one for
+    whichever zone classify() reports as the overall state."""
+    return {z.zone_id for z in zones if z.active and _point_in_zone(x, y, z)}
+
+
 def classify(x: float, y: float, zones: List[Zone]) -> Tuple[str, Optional[str]]:
     """Returns (state, zone_id) for the given position against the given
     zones. Inactive zones are ignored. Exclusion (BREACH) always
     outranks Warning, regardless of draw order or nesting."""
-    active_zones = [z for z in zones if z.active]
+    contained_ids = contained_zone_ids(x, y, zones)
+    contained = [z for z in zones if z.zone_id in contained_ids]
 
-    for zone in active_zones:
-        if zone.type == "exclusion" and _point_in_zone(x, y, zone):
+    for zone in contained:
+        if zone.type == "exclusion":
             return "BREACH", zone.zone_id
 
-    for zone in active_zones:
-        if zone.type == "warning" and _point_in_zone(x, y, zone):
+    for zone in contained:
+        if zone.type == "warning":
             return "WARNING", zone.zone_id
 
     return "SAFE", None

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import geofence, state
+from . import events, geofence, state
+from .events import router as events_router
 from .models import PositionResult, PositionUpdate
 from .zones import router as zones_router
 
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(zones_router)
+app.include_router(events_router)
 
 
 @app.get("/api/health")
@@ -43,7 +45,12 @@ def update_position(update: PositionUpdate):
             degraded=True,
         )
 
-    safety_state, zone_id = geofence.classify(update.x, update.y, state.list_zones())
+    zones = state.list_zones()
+    safety_state, zone_id = geofence.classify(update.x, update.y, zones)
+
+    contained = geofence.contained_zone_ids(update.x, update.y, zones)
+    events.record_transitions(update.tag_id, zones, contained)
+
     return PositionResult(
         tag_id=update.tag_id,
         state=safety_state,

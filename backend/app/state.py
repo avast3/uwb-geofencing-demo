@@ -4,12 +4,19 @@ No database: this is a local student demo. All zones are lost when the
 backend process restarts, which is an explicitly accepted trade-off.
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Set
 
-from .models import Zone
+from .models import Event, Zone
 
 _zones: Dict[str, "Zone"] = {}
 _id_counter = 0
+
+_events: List["Event"] = []
+_event_counter = 0
+
+# Which zone_ids each tag was inside as of its last position update, so a
+# transition can be detected (entered/exited) without re-deriving history.
+_tag_zone_membership: Dict[str, Set[str]] = {}
 
 
 def _letter(n: int) -> str:
@@ -47,3 +54,29 @@ def delete_zone(zone_id: str) -> bool:
 
 def clear_zones() -> None:
     _zones.clear()
+
+
+def next_event_id() -> str:
+    global _event_counter
+    _event_counter += 1
+    return f"EVT-{_event_counter}"
+
+
+def list_events() -> List["Event"]:
+    return list(_events)
+
+
+def add_event(event: "Event") -> None:
+    _events.append(event)
+
+
+def clear_events() -> None:
+    _events.clear()
+
+
+def get_zone_membership(tag_id: str) -> Set[str]:
+    return set(_tag_zone_membership.get(tag_id, set()))
+
+
+def set_zone_membership(tag_id: str, zone_ids: Set[str]) -> None:
+    _tag_zone_membership[tag_id] = set(zone_ids)

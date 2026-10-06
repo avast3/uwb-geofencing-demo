@@ -3,17 +3,20 @@ import SiteMap from "./components/SiteMap";
 import ZoneToolbar from "./components/ZoneToolbar";
 import ZoneProperties from "./components/ZoneProperties";
 import Controls from "./components/Controls";
+import StatusPanel from "./components/StatusPanel";
+import EventLog from "./components/EventLog";
 import * as api from "./services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
 import type { MetrePoint } from "./utils/coordinateTransform";
 import { computeAnchorRanges } from "./utils/ranging";
 import { estimatePosition } from "./utils/positioning";
-import type { AppMode, PositionResult, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
+import type { AppMode, LogEvent, PositionResult, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
 import "./App.css";
 
 const TAG_ID = "TAG-001";
 const HEALTH_POLL_MS = 4000;
 const POSITION_POLL_MS = 200; // ~5/sec, well within the spec's "~10x/sec" guidance
+const EVENTS_POLL_MS = 1000;
 const WORKER_SPEED_MPS = 2.5;
 const WORKER_START_POSITION: MetrePoint = { x: SITE_WIDTH_M / 2, y: SITE_HEIGHT_M / 2 };
 // Anchor on/off toggling is a later stage; for now every anchor is always
@@ -44,6 +47,7 @@ export default function App() {
   const [noiseEnabled, setNoiseEnabled] = useState(false); // OFF by default, see design spec
   const [showEstimate, setShowEstimate] = useState(false);
   const [geofenceResult, setGeofenceResult] = useState<PositionResult | null>(null);
+  const [events, setEvents] = useState<LogEvent[]>([]);
   const [, setRangeSampleTick] = useState(0); // write-only: just forces periodic re-renders below
   const zoneCounterRef = useRef(0);
 
@@ -91,6 +95,24 @@ export default function App() {
       const result = await api.postPosition(TAG_ID, pos.x, pos.y, Array.from(ALL_ANCHOR_IDS));
       if (!cancelled) setGeofenceResult(result);
     }, POSITION_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [mode]);
+
+  // Event log: polled independently of the position loop above since it
+  // only changes episodically (on an actual zone entry/exit), not every
+  // position sample.
+  useEffect(() => {
+    if (mode !== "live") return;
+    let cancelled = false;
+    const poll = async () => {
+      const latest = await api.getEvents();
+      if (!cancelled) setEvents(latest);
+    };
+    void poll();
+    const interval = setInterval(poll, EVENTS_POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -172,6 +194,11 @@ export default function App() {
     setMode("live");
   }
 
+  function handleClearEvents() {
+    setEvents([]);
+    void api.clearEvents();
+  }
+
   const backendLabel =
     backendOnline === null ? "BACKEND: CHECKING..." : backendOnline ? "BACKEND: CONNECTED" : "BACKEND: OFFLINE";
   const backendClass =
@@ -225,77 +252,81 @@ export default function App() {
             onToggleActive={(active) => patchSelected({ active })}
           />
         ) : (
-          <div className="properties-panel">
-            <h3>LIVE SIMULATION MODE</h3>
-            <p className="properties-empty">
-              Event logging and the simulated wearable LED are added in
-              later build stages. For now this mode locks the zone
-              geometry, lets you drive TAG-001 around the site, and sends
-              the UWB-estimated position to the backend for the
-              authoritative SAFE/WARNING/BREACH check.
-            </p>
-            <div className="properties-row">
-              <span>Geofence</span>
-              <span className={`properties-value geofence-${(geofenceResult?.state ?? "pending").toLowerCase()}`}>
-                {geofenceResult
-                  ? geofenceResult.degraded
-                    ? "SYSTEM DEGRADED"
-                    : (geofenceResult.state ?? "—") + (geofenceResult.zoneId ? ` (${geofenceResult.zoneId})` : "")
-                  : "—"}
-              </span>
-            </div>
-            <div className="properties-row">
-              <span>Ground truth</span>
-              <span className="properties-value">
-                X {workerPosition.x.toFixed(2)} m, Y {workerPosition.y.toFixed(2)} m
-              </span>
-            </div>
-            <div className="properties-row">
-              <span>Estimated (UWB)</span>
-              <span className="properties-value">
-                {estimatedPosition
-                  ? `X ${estimatedPosition.x.toFixed(2)} m, Y ${estimatedPosition.y.toFixed(2)} m`
-                  : "POSITION UNAVAILABLE"}
-              </span>
-            </div>
-            {positionErrorM !== null && (
+          <div className="right-column">
+            <StatusPanel
+              tagId={TAG_ID}
+              state={geofenceResult?.state ?? null}
+              zoneId={geofenceResult?.zoneId ?? null}
+              degraded={geofenceResult?.degraded ?? false}
+            />
+
+            <div className="properties-panel">
+              <h3>LIVE SIMULATION MODE</h3>
+              <p className="properties-empty">
+                This mode locks the zone geometry, lets you drive TAG-001
+                around the site, and sends the UWB-estimated position to
+                the backend for the authoritative SAFE/WARNING/BREACH
+                check and event log above.
+              </p>
               <div className="properties-row">
-                <span>Position error</span>
-                <span className="properties-value">{(positionErrorM * 100).toFixed(1)} cm</span>
+                <span>Ground truth</span>
+                <span className="properties-value">
+                  X {workerPosition.x.toFixed(2)} m, Y {workerPosition.y.toFixed(2)} m
+                </span>
               </div>
-            )}
-
-            <label className="properties-row">
-              <span>UWB Noise</span>
-              <input
-                type="checkbox"
-                checked={noiseEnabled}
-                onChange={(e) => setNoiseEnabled(e.target.checked)}
-              />
-            </label>
-            <label className="properties-row">
-              <span>Show UWB Estimate</span>
-              <input
-                type="checkbox"
-                checked={showEstimate}
-                onChange={(e) => setShowEstimate(e.target.checked)}
-              />
-            </label>
-
-            <h3 className="ranges-heading">UWB RANGES (sim.)</h3>
-            {anchorRanges.map((r) => (
-              <div className="properties-row" key={r.anchorId}>
-                <span>{r.anchorId}</span>
-                <span className="properties-value">{r.distance.toFixed(2)} m</span>
+              <div className="properties-row">
+                <span>Estimated (UWB)</span>
+                <span className="properties-value">
+                  {estimatedPosition
+                    ? `X ${estimatedPosition.x.toFixed(2)} m, Y ${estimatedPosition.y.toFixed(2)} m`
+                    : "POSITION UNAVAILABLE"}
+                </span>
               </div>
-            ))}
+              {positionErrorM !== null && (
+                <div className="properties-row">
+                  <span>Position error</span>
+                  <span className="properties-value">{(positionErrorM * 100).toFixed(1)} cm</span>
+                </div>
+              )}
 
-            <button className="toolbar-btn" onClick={() => setMode("setup")}>
-              EDIT ZONES
-            </button>
+              <label className="properties-row">
+                <span>UWB Noise</span>
+                <input
+                  type="checkbox"
+                  checked={noiseEnabled}
+                  onChange={(e) => setNoiseEnabled(e.target.checked)}
+                />
+              </label>
+              <label className="properties-row">
+                <span>Show UWB Estimate</span>
+                <input
+                  type="checkbox"
+                  checked={showEstimate}
+                  onChange={(e) => setShowEstimate(e.target.checked)}
+                />
+              </label>
+
+              <h3 className="ranges-heading">UWB RANGES (sim.)</h3>
+              {anchorRanges.map((r) => (
+                <div className="properties-row" key={r.anchorId}>
+                  <span>{r.anchorId}</span>
+                  <span className="properties-value">{r.distance.toFixed(2)} m</span>
+                </div>
+              ))}
+
+              <button className="toolbar-btn" onClick={() => setMode("setup")}>
+                EDIT ZONES
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {mode === "live" && (
+        <div className="event-log-section">
+          <EventLog events={events} onClear={handleClearEvents} />
+        </div>
+      )}
 
       <footer className="app-footer">
         <div className="disclaimer">

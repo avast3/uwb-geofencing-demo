@@ -72,3 +72,15 @@ export interface PositionResult {
   anchorsOnline: number;
   degraded: boolean;
 }
+
+export type ZoneTransition = "ENTERED" | "EXITED";
+
+export interface LogEvent {
+  eventId: string;
+  timestamp: string;
+  tagId: string;
+  zoneId: string;
+  zoneName: string;
+  transition: ZoneTransition;
+  message: string;
+}

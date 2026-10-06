@@ -93,3 +93,16 @@ class PositionResult(BaseModel):
     zone_id: Optional[str] = None
     anchors_online: int
     degraded: bool
+
+
+TransitionType = Literal["ENTERED", "EXITED"]
+
+
+class Event(BaseModel):
+    event_id: str
+    timestamp: str  # HH:MM:SS, local time — matches the design spec's examples
+    tag_id: str
+    zone_id: str
+    zone_name: str
+    transition: TransitionType
+    message: str
