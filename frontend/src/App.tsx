@@ -2,11 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import SiteMap from "./components/SiteMap";
 import ZoneToolbar from "./components/ZoneToolbar";
 import ZoneProperties from "./components/ZoneProperties";
+import Controls from "./components/Controls";
 import * as api from "./services/api";
+import { SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
+import type { MetrePoint } from "./utils/coordinateTransform";
 import type { AppMode, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
 import "./App.css";
 
 const HEALTH_POLL_MS = 4000;
+const WORKER_SPEED_MPS = 2.5;
+const WORKER_START_POSITION: MetrePoint = { x: SITE_WIDTH_M / 2, y: SITE_HEIGHT_M / 2 };
 
 // Converts a running counter into A, B, C, ... Z, AA, AB, ... used for the
 // default human-readable zone name (the zone's actual id is assigned by
@@ -27,6 +32,7 @@ export default function App() {
   const [tool, setTool] = useState<Tool>("select");
   const [mode, setMode] = useState<AppMode>("setup");
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null); // null = checking
+  const [workerPosition, setWorkerPosition] = useState<MetrePoint>(WORKER_START_POSITION);
   const zoneCounterRef = useRef(0);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
@@ -95,6 +101,18 @@ export default function App() {
     void api.clearZones();
   }
 
+  // Applied every animation frame while a movement key is held. Reads the
+  // previous position from React's functional update, never from a
+  // closure, so rapid key-driven updates can't go stale or drop frames.
+  function handleWorkerMove(dxM: number, dyM: number) {
+    setWorkerPosition((prev) => clampToSite({ x: prev.x + dxM, y: prev.y + dyM }));
+  }
+
+  function handleStartSimulation() {
+    setWorkerPosition(WORKER_START_POSITION);
+    setMode("live");
+  }
+
   const backendLabel =
     backendOnline === null ? "BACKEND: CHECKING..." : backendOnline ? "BACKEND: CONNECTED" : "BACKEND: OFFLINE";
   const backendClass =
@@ -130,10 +148,12 @@ export default function App() {
             selectedZoneId={selectedZoneId}
             tool={mode === "live" ? "select" : tool}
             locked={mode === "live"}
+            workerPosition={mode === "live" ? workerPosition : null}
             onZoneCreate={handleZoneCreate}
             onZoneUpdate={handleZoneUpdate}
             onZoneSelect={setSelectedZoneId}
           />
+          <Controls active={mode === "live"} speed={WORKER_SPEED_MPS} onMove={handleWorkerMove} />
         </div>
 
         {mode === "setup" ? (
@@ -147,10 +167,16 @@ export default function App() {
           <div className="properties-panel">
             <h3>LIVE SIMULATION MODE</h3>
             <p className="properties-empty">
-              Worker control, UWB ranging and live SAFE/WARNING/BREACH status
-              are added in later build stages. For now this mode only proves
-              the zone geometry is locked in before "live" operation begins.
+              UWB ranging, multilateration and live SAFE/WARNING/BREACH status
+              are added in later build stages. For now this mode locks the
+              zone geometry and lets you drive TAG-001 around the site.
             </p>
+            <div className="properties-row">
+              <span>Ground truth</span>
+              <span className="properties-value">
+                X {workerPosition.x.toFixed(2)} m, Y {workerPosition.y.toFixed(2)} m
+              </span>
+            </div>
             <button className="toolbar-btn" onClick={() => setMode("setup")}>
               EDIT ZONES
             </button>
@@ -167,7 +193,7 @@ export default function App() {
           <button
             className="start-simulation-btn"
             disabled={!hasActiveZone}
-            onClick={() => setMode("live")}
+            onClick={handleStartSimulation}
             title={hasActiveZone ? "" : "Create at least one active zone first"}
           >
             START SIMULATION

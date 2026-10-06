@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Anchor from "./Anchor";
 import ZoneComp from "./Zone";
+import WorkerComp from "./Worker";
 import {
   MARGIN_PX,
   MIN_ZONE_SIZE_M,
@@ -40,6 +41,8 @@ interface SiteMapProps {
   tool: Tool;
   /** LIVE SIMULATION MODE: zone geometry is locked — no draw/move/resize. */
   locked?: boolean;
+  /** Ground-truth worker position; omitted/undefined in ZONE SETUP MODE. */
+  workerPosition?: MetrePoint | null;
   onZoneCreate: (draft: ZoneDraft) => void;
   onZoneUpdate: (id: string, patch: ZonePatch) => void;
   onZoneSelect: (id: string | null) => void;
@@ -143,6 +146,7 @@ export default function SiteMap({
   selectedZoneId,
   tool,
   locked = false,
+  workerPosition = null,
   onZoneCreate,
   onZoneUpdate,
   onZoneSelect,
@@ -403,6 +407,9 @@ export default function SiteMap({
       {ANCHORS.map((a) => (
         <Anchor key={a.id} anchor={a} />
       ))}
+
+      {/* Worker drawn last so it's always visible above anchors/zones */}
+      {workerPosition && <WorkerComp position={workerPosition} />}
     </svg>
   );
 }
