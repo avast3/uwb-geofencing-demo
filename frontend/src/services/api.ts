@@ -4,6 +4,7 @@
 // and converts it to/from the frontend's camelCase Zone type.
 
 import type {
+  AckStatus,
   LogEvent,
   PositionResult,
   SafetyState,
@@ -188,6 +189,10 @@ interface BackendEvent {
   zone_name: string;
   transition: ZoneTransition;
   message: string;
+  requires_ack: boolean;
+  ack_status: AckStatus | null;
+  action_note: string | null;
+  cleared_at: string | null;
 }
 
 function fromBackendEvent(e: BackendEvent): LogEvent {
@@ -199,6 +204,10 @@ function fromBackendEvent(e: BackendEvent): LogEvent {
     zoneName: e.zone_name,
     transition: e.transition,
     message: e.message,
+    requiresAck: e.requires_ack,
+    ackStatus: e.ack_status,
+    actionNote: e.action_note,
+    clearedAt: e.cleared_at,
   };
 }
 
@@ -210,4 +219,24 @@ export async function getEvents(): Promise<LogEvent[]> {
 export async function clearEvents(): Promise<boolean> {
   const result = await request<{ cleared: boolean }>("/api/events", { method: "DELETE" });
   return result?.cleared === true;
+}
+
+async function resolveEvent(
+  eventId: string,
+  action: "acknowledge" | "escalate",
+  actionNote: string
+): Promise<LogEvent | null> {
+  const result = await request<BackendEvent>(`/api/events/${eventId}/${action}`, {
+    method: "POST",
+    body: JSON.stringify({ action_note: actionNote || null }),
+  });
+  return result ? fromBackendEvent(result) : null;
+}
+
+export function acknowledgeEvent(eventId: string, actionNote: string): Promise<LogEvent | null> {
+  return resolveEvent(eventId, "acknowledge", actionNote);
+}
+
+export function escalateEvent(eventId: string, actionNote: string): Promise<LogEvent | null> {
+  return resolveEvent(eventId, "escalate", actionNote);
 }

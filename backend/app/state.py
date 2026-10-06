@@ -74,6 +74,21 @@ def clear_events() -> None:
     _events.clear()
 
 
+def get_event(event_id: str) -> Optional["Event"]:
+    for event in _events:
+        if event.event_id == event_id:
+            return event
+    return None
+
+
+def update_event(updated: "Event") -> bool:
+    for i, event in enumerate(_events):
+        if event.event_id == updated.event_id:
+            _events[i] = updated
+            return True
+    return False
+
+
 def get_zone_membership(tag_id: str) -> Set[str]:
     return set(_tag_zone_membership.get(tag_id, set()))
 

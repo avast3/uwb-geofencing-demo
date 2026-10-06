@@ -97,6 +97,8 @@ class PositionResult(BaseModel):
 
 TransitionType = Literal["ENTERED", "EXITED"]
 
+AckStatus = Literal["PENDING", "ACKNOWLEDGED", "ESCALATED"]
+
 
 class Event(BaseModel):
     event_id: str
@@ -106,3 +108,14 @@ class Event(BaseModel):
     zone_name: str
     transition: TransitionType
     message: str
+    # Only ENTERED-exclusion events require supervisor action, matching the
+    # ZoneWatch wireframe: a warning-zone crossing is a plain log line, a
+    # red-zone entry is an alert card needing Acknowledge/Escalate.
+    requires_ack: bool = False
+    ack_status: Optional[AckStatus] = None
+    action_note: Optional[str] = None
+    cleared_at: Optional[str] = None
+
+
+class EventAction(BaseModel):
+    action_note: Optional[str] = None

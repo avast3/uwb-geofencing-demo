@@ -554,6 +554,9 @@
 /* --- Event log --- */
 .event-log-section {
   padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .event-log {
@@ -608,4 +611,114 @@
 
 .event-log-exited {
   color: #22c55e;
+}
+
+.event-log-text {
+  display: inline;
+}
+
+.event-log-resolution {
+  font-weight: 400;
+}
+
+.event-log-resolution-pending {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.event-log-resolution-acknowledged {
+  color: #94a3b8;
+}
+
+.event-log-resolution-escalated {
+  color: #ef4444;
+}
+
+/* --- Supervisor alert queue --- */
+.alert-queue {
+  background: #121a2b;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.alert-queue h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #ef4444;
+}
+
+.alert-card {
+  background: #1b1016;
+  border: 1px solid #5b2330;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.alert-card:last-child {
+  margin-bottom: 0;
+}
+
+.alert-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.alert-card-title {
+  color: #ef4444;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.alert-card-time {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.alert-card-body {
+  font-size: 13px;
+  color: #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.alert-card-note {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #2c3a56;
+  color: #e2e8f0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.alert-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.alert-btn {
+  flex: 1;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.alert-btn-ack {
+  background: #16a34a;
+  color: #f0fdf4;
+}
+
+.alert-btn-escalate {
+  background: #dc2626;
+  color: #fef2f2;
 }

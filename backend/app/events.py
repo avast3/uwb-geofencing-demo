@@ -6,16 +6,20 @@ would flood the log every ~200ms while the tag sits still inside a zone.
 from datetime import datetime
 from typing import List, Set
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from . import state
-from .models import Event, TransitionType, Zone
+from .models import Event, EventAction, TransitionType, Zone
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 
 def _make_event(tag_id: str, zone: Zone, transition: TransitionType) -> Event:
     message = f"{tag_id} {transition} {zone.name.upper()}"
+    # Matches the ZoneWatch wireframe: only a red-zone (exclusion) ENTRY is
+    # an alert needing supervisor Acknowledge/Escalate. A warning crossing,
+    # or any EXIT, is just a log line.
+    requires_ack = transition == "ENTERED" and zone.type == "exclusion"
     return Event(
         event_id=state.next_event_id(),
         timestamp=datetime.now().strftime("%H:%M:%S"),
@@ -24,6 +28,8 @@ def _make_event(tag_id: str, zone: Zone, transition: TransitionType) -> Event:
         zone_name=zone.name,
         transition=transition,
         message=message,
+        requires_ack=requires_ack,
+        ack_status="PENDING" if requires_ack else None,
     )
 
 
@@ -65,3 +71,30 @@ def list_events():
 def clear_events():
     state.clear_events()
     return {"cleared": True}
+
+
+def _resolve_event(event_id: str, status: str, action: EventAction) -> Event:
+    event = state.get_event(event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if not event.requires_ack:
+        raise HTTPException(status_code=400, detail="This event does not require supervisor action")
+    updated = event.model_copy(
+        update={
+            "ack_status": status,
+            "action_note": action.action_note,
+            "cleared_at": datetime.now().strftime("%H:%M:%S"),
+        }
+    )
+    state.update_event(updated)
+    return updated
+
+
+@router.post("/{event_id}/acknowledge", response_model=Event)
+def acknowledge_event(event_id: str, action: EventAction):
+    return _resolve_event(event_id, "ACKNOWLEDGED", action)
+
+
+@router.post("/{event_id}/escalate", response_model=Event)
+def escalate_event(event_id: str, action: EventAction):
+    return _resolve_event(event_id, "ESCALATED", action)

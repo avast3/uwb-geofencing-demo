@@ -6,6 +6,7 @@ import Controls from "./components/Controls";
 import StatusPanel from "./components/StatusPanel";
 import SystemStatus from "./components/SystemStatus";
 import EventLog from "./components/EventLog";
+import AlertQueue from "./components/AlertQueue";
 import * as api from "./services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
 import type { MetrePoint } from "./utils/coordinateTransform";
@@ -226,6 +227,16 @@ export default function App() {
     void api.clearEvents();
   }
 
+  async function handleAcknowledgeAlert(eventId: string, note: string) {
+    const updated = await api.acknowledgeEvent(eventId, note);
+    if (updated) setEvents((prev) => prev.map((e) => (e.eventId === eventId ? updated : e)));
+  }
+
+  async function handleEscalateAlert(eventId: string, note: string) {
+    const updated = await api.escalateEvent(eventId, note);
+    if (updated) setEvents((prev) => prev.map((e) => (e.eventId === eventId ? updated : e)));
+  }
+
   function handleAnchorToggle(anchorId: string) {
     setOnlineAnchorIds((prev) => {
       const next = new Set(prev);
@@ -236,6 +247,7 @@ export default function App() {
   }
 
   const lastMessage = events.length > 0 ? events[events.length - 1].message : null;
+  const pendingAlerts = events.filter((e) => e.requiresAck && e.ackStatus === "PENDING");
 
   const backendLabel =
     backendOnline === null ? "BACKEND: CHECKING..." : backendOnline ? "BACKEND: CONNECTED" : "BACKEND: OFFLINE";
@@ -373,6 +385,7 @@ export default function App() {
 
       {mode === "live" && (
         <div className="event-log-section">
+          <AlertQueue alerts={pendingAlerts} onAcknowledge={handleAcknowledgeAlert} onEscalate={handleEscalateAlert} />
           <EventLog events={events} onClear={handleClearEvents} />
         </div>
       )}

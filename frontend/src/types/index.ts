@@ -75,6 +75,8 @@ export interface PositionResult {
 
 export type ZoneTransition = "ENTERED" | "EXITED";
 
+export type AckStatus = "PENDING" | "ACKNOWLEDGED" | "ESCALATED";
+
 export interface LogEvent {
   eventId: string;
   timestamp: string;
@@ -83,4 +85,9 @@ export interface LogEvent {
   zoneName: string;
   transition: ZoneTransition;
   message: string;
+  /** Only true for an ENTERED-exclusion (BREACH) event. */
+  requiresAck: boolean;
+  ackStatus: AckStatus | null;
+  actionNote: string | null;
+  clearedAt: string | null;
 }
