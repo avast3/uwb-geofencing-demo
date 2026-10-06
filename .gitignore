@@ -6,3 +6,7 @@ dist/
 __pycache__/
 *.pyc
 .venv/
+.Rhistory
+# emitted by `tsc -b` (tsconfig.node.json is composite)
+frontend/vite.config.js
+frontend/vite.config.d.ts

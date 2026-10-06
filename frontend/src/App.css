@@ -722,3 +722,57 @@
   background: #dc2626;
   color: #fef2f2;
 }
+
+/* --- Supervisor console link + alarm --- */
+.supervisor-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: #0f172a;
+  border: 1px solid #64748b;
+  color: #94a3b8;
+  text-decoration: none;
+}
+
+.supervisor-badge.pending {
+  border-color: #ef4444;
+  color: #ef4444;
+  animation: alarm-pulse 1s ease-in-out infinite;
+}
+
+.alarm-btn {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: #0f172a;
+  border: 1px solid #64748b;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.alarm-btn.needs-enable {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.alarm-btn.sounding {
+  border-color: #ef4444;
+  color: #ef4444;
+  animation: alarm-pulse 1s ease-in-out infinite;
+}
+
+@keyframes alarm-pulse {
+  50% {
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+  }
+}
+
+.supervisor-section {
+  padding-top: 16px;
+  flex: 1;
+}

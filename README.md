@@ -61,9 +61,15 @@ geofence verdict.
    **TAG-001 STATUS** panel: the LED is off/grey while SAFE, glows amber
    in a Warning zone, glows red in an Exclusion zone. If a zone overlaps
    both types, **Exclusion (BREACH) always wins**.
-4. **Watch the EVENT LOG** at the bottom pick up `ENTERED`/`EXITED` lines
-   as you cross zone boundaries — one line per actual crossing, not one
-   per frame.
+4. **Open the supervisor console.** Click the **SUPERVISOR: N PENDING ↗**
+   badge in the header (or go to <http://localhost:5173/supervisor>) and
+   put that window beside the map. Click **ENABLE ALARM SOUND** once —
+   browsers block audio until the page is clicked. Every exclusion-zone
+   entry now shows up as a **SUPERVISOR ALERT** and the console repeats a
+   *beep~ beep~* alarm until each alert is **Acknowledged** or
+   **Escalated** (use **ALARM ON/MUTED** to silence it). The **EVENT LOG**
+   below picks up `ENTERED`/`EXITED` lines as you cross zone boundaries —
+   one line per actual crossing, not one per frame.
 5. **Toggle UWB Noise** (in the diagnostics panel) to see the cyan
    "estimated position" cross (enable **Show UWB Estimate** first) wobble
    a few centimetres around the worker instead of overlapping it exactly.
@@ -125,7 +131,10 @@ frontend/
       api.ts      all fetch calls + backend<->frontend field conversion
     types/
       index.ts    shared domain types
-    App.tsx       top-level state and layout
+    utils/alarm.ts  useAlarm(): repeating Web Audio beep for the console
+    App.tsx       site map page: top-level state and layout
+    SupervisorPage.tsx  /supervisor console: alerts, event log, alarm
+    main.tsx      picks the page from the URL path
   package.json
 
 docs/superpowers/specs/   design spec this project was built from

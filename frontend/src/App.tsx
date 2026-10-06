@@ -5,8 +5,6 @@ import ZoneProperties from "./components/ZoneProperties";
 import Controls from "./components/Controls";
 import StatusPanel from "./components/StatusPanel";
 import SystemStatus from "./components/SystemStatus";
-import EventLog from "./components/EventLog";
-import AlertQueue from "./components/AlertQueue";
 import * as api from "./services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
 import type { MetrePoint } from "./utils/coordinateTransform";
@@ -130,9 +128,10 @@ export default function App() {
 
   // Event log: polled independently of the position loop above since it
   // only changes episodically (on an actual zone entry/exit), not every
-  // position sample.
+  // position sample. Polled in both modes so the header's pending-alert
+  // badge stays accurate even while the supervisor resolves alerts from
+  // the /supervisor page during zone setup.
   useEffect(() => {
-    if (mode !== "live") return;
     let cancelled = false;
     const poll = async () => {
       const latest = await api.getEvents();
@@ -144,7 +143,7 @@ export default function App() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [mode]);
+  }, []);
 
   // Initial load from the backend (the authoritative zone store) and a
   // periodic health poll driving the BACKEND: CONNECTED/OFFLINE indicator.
@@ -222,21 +221,6 @@ export default function App() {
     setMode("live");
   }
 
-  function handleClearEvents() {
-    setEvents([]);
-    void api.clearEvents();
-  }
-
-  async function handleAcknowledgeAlert(eventId: string, note: string) {
-    const updated = await api.acknowledgeEvent(eventId, note);
-    if (updated) setEvents((prev) => prev.map((e) => (e.eventId === eventId ? updated : e)));
-  }
-
-  async function handleEscalateAlert(eventId: string, note: string) {
-    const updated = await api.escalateEvent(eventId, note);
-    if (updated) setEvents((prev) => prev.map((e) => (e.eventId === eventId ? updated : e)));
-  }
-
   function handleAnchorToggle(anchorId: string) {
     setOnlineAnchorIds((prev) => {
       const next = new Set(prev);
@@ -259,6 +243,15 @@ export default function App() {
       <header className="app-header">
         <h1>UWB CONSTRUCTION SAFETY DEMO</h1>
         <div className="header-badges">
+          <a
+            className={`supervisor-badge${pendingAlerts.length > 0 ? " pending" : ""}`}
+            href="/supervisor"
+            target="_blank"
+            rel="noopener"
+            title="Open the supervisor console (alerts + event log) in a new window"
+          >
+            SUPERVISOR: {pendingAlerts.length} PENDING ↗
+          </a>
           <span className={backendClass}>{backendLabel}</span>
           <span className="mode-badge">
             {mode === "setup" ? "ZONE SETUP MODE" : "LIVE SIMULATION MODE"}
@@ -327,7 +320,8 @@ export default function App() {
                 This mode locks the zone geometry, lets you drive TAG-001
                 around the site, and sends the UWB-estimated position to
                 the backend for the authoritative SAFE/WARNING/BREACH
-                check and event log above.
+                check. Alerts and the event log are on the
+                supervisor console (header link).
               </p>
               <div className="properties-row">
                 <span>Ground truth</span>
@@ -382,13 +376,6 @@ export default function App() {
           </div>
         )}
       </div>
-
-      {mode === "live" && (
-        <div className="event-log-section">
-          <AlertQueue alerts={pendingAlerts} onAcknowledge={handleAcknowledgeAlert} onEscalate={handleEscalateAlert} />
-          <EventLog events={events} onClear={handleClearEvents} />
-        </div>
-      )}
 
       <footer className="app-footer">
         <div className="disclaimer">
