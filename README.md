@@ -73,7 +73,8 @@ geofence verdict.
    active exclusion zone is enough to proceed. A warning zone drawn
    around (or overlapping) an exclusion zone demonstrates the priority
    rule below. Or pick **🚛 Moving Plant** and click the site to place a
-   semi-truck; its exclusion zone and warning ring are fixed to it (place
+   semi-truck; its circular exclusion zone and warning ring are fixed to
+   it (place
    as many as you like).
 2. **Press START SIMULATION.** The toolbar collapses, zone geometry
    locks, and TAG-001 (a little hard-hat worker) appears at the site
@@ -145,12 +146,32 @@ plant motion (ground truth)                         [frontend, utils/plantMotion
       v
 simulated UWB ranges -> multilateration -> estimate [frontend, hooks/usePlantSimulation.ts]
       v
-POST /api/plants/{id}/position {x, y, heading}  ~5x/sec per plant
+POST /api/plants/{id}/position {x, y}  ~5x/sec per plant
       v
-backend re-derives the plant's exclusion + warning zones  [backend, plants.py]
+backend re-centres the plant's circular exclusion + warning zones  [backend, plants.py]
       v
 worker positions are classified against the moved zones (unchanged geofence/events)
 ```
+
+### Why moving plant zones are circles
+
+A single UWB tag measures **where** it is, not **which way it is facing**.
+The truck in the demo turns as it drives, but the backend is only ever
+sent its measured position — never its orientation, because a real
+single-tag system couldn't know it. So each plant's zones are circles
+centred on the tag, sized to cover the truck whichever way it faces:
+
+| Zone | Radius | How it's derived |
+|---|---|---|
+| Truck body (1.6 m × 0.7 m) | 0.87 m | centre-to-corner distance — the furthest any part of the truck can be from the tag |
+| Exclusion (red) | 1.17 m | body + 0.3 m margin |
+| Warning (amber) | 1.77 m | exclusion + 0.6 m |
+
+The trade-off is a slightly larger zone than a rectangle fitted to the
+truck. A deployed system could measure orientation with **two tags per
+vehicle** (front and rear — the direction between them gives the heading)
+and fit the zone to the vehicle's shape; that is a plausible future
+extension, not part of this demo.
 
 ## Project structure
 
@@ -204,7 +225,7 @@ docs/superpowers/specs/   design spec this project was built from
 | `DELETE /api/events`           | Clear the event log |
 | `POST /api/plants`                    | Place a moving plant at `{x, y}`; creates its exclusion + warning zones |
 | `GET /api/plants`                     | List moving plants |
-| `POST /api/plants/{plant_id}/position` | `{x, y, heading}` — plant's UWB-estimated position; zones are re-derived |
+| `POST /api/plants/{plant_id}/position` | `{x, y}` — plant's UWB-estimated position; its zones are re-centred |
 | `POST /api/plants/{plant_id}/reset`    | Return a plant to where it was placed |
 | `DELETE /api/plants/{plant_id}`        | Remove a plant and its zones |
 

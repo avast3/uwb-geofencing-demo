@@ -7,7 +7,6 @@ import type {
   AckStatus,
   LogEvent,
   Plant,
-  PlantHeading,
   PlantUpdateResult,
   PlantWithZones,
   PositionResult,
@@ -253,7 +252,6 @@ interface BackendPlant {
   name: string;
   x: number;
   y: number;
-  heading: PlantHeading;
   home_x: number;
   home_y: number;
   exclusion_zone_id: string;
@@ -271,7 +269,6 @@ function fromBackendPlant(p: BackendPlant): Plant {
     name: p.name,
     x: p.x,
     y: p.y,
-    heading: p.heading,
     homeX: p.home_x,
     homeY: p.home_y,
     exclusionZoneId: p.exclusion_zone_id,
@@ -296,21 +293,21 @@ export async function createPlant(x: number, y: number): Promise<PlantWithZones 
   return result ? fromBackendPlantWithZones(result) : null;
 }
 
-// Sends the plant's estimated UWB position. Unlike request(), this
+// Sends the plant's estimated UWB position — position only, since a
+// single UWB tag can't measure orientation. Unlike request(), this
 // distinguishes 404 (plant deleted elsewhere, e.g. Clear Zones in another
 // window) from a transient failure, so the caller can drop the plant
 // instead of retrying it 5x/sec forever.
 export async function postPlantPosition(
   id: string,
   x: number,
-  y: number,
-  heading: PlantHeading
+  y: number
 ): Promise<PlantUpdateResult> {
   try {
     const res = await fetch(`${BASE_URL}/api/plants/${id}/position`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ x, y, heading }),
+      body: JSON.stringify({ x, y }),
     });
     if (res.status === 404) return { kind: "gone" };
     if (!res.ok) return { kind: "error" };

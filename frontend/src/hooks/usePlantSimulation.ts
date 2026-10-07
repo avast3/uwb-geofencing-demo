@@ -3,7 +3,7 @@ import * as api from "../services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M } from "../utils/coordinateTransform";
 import { computeAnchorRanges } from "../utils/ranging";
 import { estimatePosition } from "../utils/positioning";
-import { headingFor, initialMotion, stepPlant } from "../utils/plantMotion";
+import { initialMotion, stepPlant } from "../utils/plantMotion";
 import type { PlantMotion } from "../utils/plantMotion";
 import type { PlantPose } from "../components/Plant";
 import type { Plant, Zone } from "../types";
@@ -88,7 +88,7 @@ export function usePlantSimulation({
         // Fewer than 3 anchors: no position fix, so the zones stay where
         // they were last measured (the system is already shown degraded).
         if (!estimate) continue;
-        void api.postPlantPosition(plant.id, estimate.x, estimate.y, headingFor(motion.direction)).then((result) => {
+        void api.postPlantPosition(plant.id, estimate.x, estimate.y).then((result) => {
           if (cancelled) return;
           if (result.kind === "ok") latest.current.onZonesUpdated(result.zones);
           else if (result.kind === "gone") latest.current.onPlantGone(plant.id);

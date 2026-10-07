@@ -1,3 +1,5 @@
+import math
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -15,8 +17,15 @@ def clean_state():
     yield
 
 
-def _size(zone):
-    return round(zone["x_max"] - zone["x_min"], 6), round(zone["y_max"] - zone["y_min"], 6)
+# A single UWB tag gives position but not orientation, so plant zones are
+# circles that cover the truck body (1.6 x 0.7 m) whichever way it faces.
+HALF_DIAGONAL_M = math.hypot(1.6 / 2, 0.7 / 2)
+EXCLUSION_RADIUS_M = HALF_DIAGONAL_M + 0.3
+WARNING_RADIUS_M = EXCLUSION_RADIUS_M + 0.6
+
+
+def _centre(zone):
+    return zone["centre_x"], zone["centre_y"]
 
 
 def _create(x=4.0, y=3.0):
@@ -25,17 +34,20 @@ def _create(x=4.0, y=3.0):
     return res.json()
 
 
-def test_create_plant_makes_two_zones_with_spec_sizes():
+def test_create_plant_makes_two_circle_zones_covering_any_orientation():
     body = _create()
     plant, zones = body["plant"], body["zones"]
     assert plant["plant_id"].startswith("PLANT-")
     assert plant["name"].startswith("Plant ")
-    assert plant["heading"] == "horizontal"
+    assert "heading" not in plant
     assert (plant["home_x"], plant["home_y"]) == (4.0, 3.0)
 
     by_type = {z["type"]: z for z in zones}
-    assert _size(by_type["exclusion"]) == (2.2, 1.3)
-    assert _size(by_type["warning"]) == (3.4, 2.5)
+    for zone in zones:
+        assert zone["shape"] == "circle"
+        assert _centre(zone) == (4.0, 3.0)
+    assert by_type["exclusion"]["radius"] == pytest.approx(EXCLUSION_RADIUS_M)
+    assert by_type["warning"]["radius"] == pytest.approx(WARNING_RADIUS_M)
     assert by_type["exclusion"]["name"] == f"{plant['name']} Exclusion"
     assert by_type["warning"]["name"] == f"{plant['name']} Warning"
     for z in zones:
@@ -45,32 +57,27 @@ def test_create_plant_makes_two_zones_with_spec_sizes():
     assert {plant["exclusion_zone_id"], plant["warning_zone_id"]} <= listed_ids
 
 
-def test_vertical_heading_swaps_zone_dimensions_and_moves_centre():
+def test_position_update_recentres_zones_without_needing_a_heading():
     plant = _create()["plant"]
-    res = client.post(
-        f"/api/plants/{plant['plant_id']}/position",
-        json={"x": 5.0, "y": 2.5, "heading": "vertical"},
-    )
+    res = client.post(f"/api/plants/{plant['plant_id']}/position", json={"x": 5.0, "y": 2.5})
     assert res.status_code == 200
+    for zone in res.json()["zones"]:
+        assert _centre(zone) == (5.0, 2.5)
     by_type = {z["type"]: z for z in res.json()["zones"]}
-    assert _size(by_type["exclusion"]) == (1.3, 2.2)
-    assert _size(by_type["warning"]) == (2.5, 3.4)
-    exc = by_type["exclusion"]
-    assert (exc["x_min"] + exc["x_max"]) / 2 == pytest.approx(5.0)
-    assert (exc["y_min"] + exc["y_max"]) / 2 == pytest.approx(2.5)
+    assert by_type["exclusion"]["radius"] == pytest.approx(EXCLUSION_RADIUS_M)
 
 
-def test_reset_returns_plant_home_and_horizontal():
+def test_reset_returns_plant_and_zones_home():
     plant = _create(2.0, 2.0)["plant"]
-    client.post(f"/api/plants/{plant['plant_id']}/position", json={"x": 6, "y": 4, "heading": "vertical"})
+    client.post(f"/api/plants/{plant['plant_id']}/position", json={"x": 6, "y": 4})
     body = client.post(f"/api/plants/{plant['plant_id']}/reset").json()
-    assert (body["plant"]["x"], body["plant"]["y"], body["plant"]["heading"]) == (2.0, 2.0, "horizontal")
-    exc = next(z for z in body["zones"] if z["type"] == "exclusion")
-    assert _size(exc) == (2.2, 1.3)
+    assert (body["plant"]["x"], body["plant"]["y"]) == (2.0, 2.0)
+    for zone in body["zones"]:
+        assert _centre(zone) == (2.0, 2.0)
 
 
 def test_unknown_plant_returns_404():
-    assert client.post("/api/plants/PLANT-999/position", json={"x": 1, "y": 1, "heading": "horizontal"}).status_code == 404
+    assert client.post("/api/plants/PLANT-999/position", json={"x": 1, "y": 1}).status_code == 404
     assert client.post("/api/plants/PLANT-999/reset").status_code == 404
     assert client.delete("/api/plants/PLANT-999").status_code == 404
 
@@ -108,7 +115,7 @@ def test_plant_driving_onto_stationary_worker_breaches():
     plant = _create(1.5, 1.5)["plant"]
     worker = {"tag_id": "TAG-001", "x": 6.0, "y": 4.0, "anchors_active": ["A1", "A2", "A3", "A4"]}
     assert client.post("/api/position", json=worker).json()["state"] == "SAFE"
-    client.post(f"/api/plants/{plant['plant_id']}/position", json={"x": 6.0, "y": 4.0, "heading": "horizontal"})
+    client.post(f"/api/plants/{plant['plant_id']}/position", json={"x": 6.0, "y": 4.0})
     result = client.post("/api/position", json=worker).json()
     assert result["state"] == "BREACH"
     assert result["zone_id"] == plant["exclusion_zone_id"]

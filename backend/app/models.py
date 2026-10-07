@@ -124,9 +124,6 @@ class EventAction(BaseModel):
     action_note: Optional[str] = None
 
 
-PlantHeading = Literal["horizontal", "vertical"]
-
-
 class PlantCreate(BaseModel):
     x: float
     y: float
@@ -134,11 +131,11 @@ class PlantCreate(BaseModel):
 
 class PlantPosition(BaseModel):
     """A plant's UWB-estimated position (not ground truth), like the
-    worker's PositionUpdate."""
+    worker's PositionUpdate. Position only: a single UWB tag can't measure
+    which way the plant is facing."""
 
     x: float
     y: float
-    heading: PlantHeading
 
 
 class Plant(BaseModel):
@@ -146,7 +143,6 @@ class Plant(BaseModel):
     name: str
     x: float
     y: float
-    heading: PlantHeading
     home_x: float
     home_y: float
     exclusion_zone_id: str

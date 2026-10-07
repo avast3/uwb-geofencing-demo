@@ -101,7 +101,6 @@ export interface Plant {
   /** Last position the backend holds (UWB estimate), metres. */
   x: number;
   y: number;
-  heading: PlantHeading;
   /** Where it was placed; END SIMULATION returns it here. */
   homeX: number;
   homeY: number;

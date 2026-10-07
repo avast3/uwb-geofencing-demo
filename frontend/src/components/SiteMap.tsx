@@ -439,7 +439,7 @@ export default function SiteMap({
         const pose: PlantPose = plantPoses[plant.id] ?? {
           x: plant.x,
           y: plant.y,
-          direction: plant.heading === "vertical" ? "up" : "right",
+          direction: "right",
         };
         return (
           <PlantComp

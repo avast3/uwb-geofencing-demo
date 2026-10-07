@@ -1,7 +1,16 @@
 # Moving Plant + End Simulation — Design
 
 Date: 2026-10-07
-Status: Draft — awaiting review
+Status: Approved and implemented
+
+> **Amendment (2026-10-07, after implementation):** plant zones are
+> **circles** centred on the plant's tag, not heading-dependent rectangles,
+> and position updates carry `{x, y}` only. A single UWB tag can't measure
+> orientation, so sending the true heading to the backend leaked
+> information a real system wouldn't have. Exclusion radius = body
+> half-diagonal (0.87 m) + 0.3 m = 1.17 m; warning radius = 1.77 m. The
+> truck graphic still turns. Sections below that mention rectangles,
+> `heading`, or swapped width/height are superseded by this note.
 
 ## 1. Purpose
 
