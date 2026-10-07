@@ -37,6 +37,13 @@ export default function ZoneToolbar({
       >
         Circle Zone
       </button>
+      <button
+        className={tool === "plant" ? "toolbar-btn active" : "toolbar-btn"}
+        onClick={() => onToolChange("plant")}
+        title="Click the site to place a semi-truck whose zones move with it"
+      >
+        🚛 Moving Plant
+      </button>
       <span className="toolbar-divider" />
       <button className="toolbar-btn danger" disabled={!hasSelection} onClick={onDeleteSelected}>
         Delete Zone

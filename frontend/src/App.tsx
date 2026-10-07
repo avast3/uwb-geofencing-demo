@@ -8,9 +8,11 @@ import SystemStatus from "./components/SystemStatus";
 import * as api from "./services/api";
 import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coordinateTransform";
 import type { MetrePoint } from "./utils/coordinateTransform";
+import { clampPlacement } from "./utils/plantMotion";
+import type { PlantPose } from "./components/Plant";
 import { computeAnchorRanges } from "./utils/ranging";
 import { estimatePosition } from "./utils/positioning";
-import type { AppMode, LogEvent, PositionResult, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
+import type { AppMode, LogEvent, Plant, PositionResult, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
 import "./App.css";
 
 const TAG_ID = "TAG-001";
@@ -20,6 +22,7 @@ const EVENTS_POLL_MS = 1000;
 const WORKER_SPEED_MPS = 2.5;
 const WORKER_START_POSITION: MetrePoint = { x: SITE_WIDTH_M / 2, y: SITE_HEIGHT_M / 2 };
 const ALL_ANCHOR_IDS = new Set(ANCHORS.map((a) => a.id));
+const SITE_BOUNDS = { width: SITE_WIDTH_M, height: SITE_HEIGHT_M };
 
 // Converts a running counter into A, B, C, ... Z, AA, AB, ... used for the
 // default human-readable zone name (the zone's actual id is assigned by
@@ -41,6 +44,7 @@ function formatClockTime(d: Date): string {
 
 export default function App() {
   const [zones, setZones] = useState<Zone[]>([]);
+  const [plants, setPlants] = useState<Plant[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("select");
   const [mode, setMode] = useState<AppMode>("setup");
@@ -56,6 +60,7 @@ export default function App() {
   const zoneCounterRef = useRef(0);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
+  const selectedPlant = selectedZone?.plantId ? plants.find((p) => p.id === selectedZone.plantId) ?? null : null;
   const hasActiveZone = zones.some((z) => z.active);
   // Not memoized, so this recomputes on every render — including every
   // movement frame and every rangeSampleTick below. A real UWB radio
@@ -157,6 +162,8 @@ export default function App() {
       if (online) {
         const loaded = await api.getZones();
         if (!cancelled) setZones(loaded);
+        const loadedPlants = await api.getPlants();
+        if (!cancelled) setPlants(loadedPlants);
       }
     })();
 
@@ -182,6 +189,27 @@ export default function App() {
     setTool("select");
   }
 
+  // Replaces the given zones in place (plant zones are re-derived by the
+  // backend whenever the plant moves) and appends any not yet known.
+  function mergeZones(updated: Zone[]) {
+    setZones((prev) => {
+      const byId = new Map(updated.map((z) => [z.id, z]));
+      const merged = prev.map((z) => byId.get(z.id) ?? z);
+      for (const z of updated) if (!prev.some((p) => p.id === z.id)) merged.push(z);
+      return merged;
+    });
+  }
+
+  async function handlePlantCreate(pointM: MetrePoint) {
+    const placed = clampPlacement(pointM.x, pointM.y, "horizontal", SITE_BOUNDS);
+    const created = await api.createPlant(placed.x, placed.y);
+    if (!created) return;
+    setPlants((prev) => [...prev, created.plant]);
+    mergeZones(created.zones);
+    setSelectedZoneId(created.plant.exclusionZoneId);
+    setTool("select");
+  }
+
   function handleZoneUpdate(id: string, patch: ZonePatch) {
     const existing = zones.find((z) => z.id === id);
     if (!existing) return;
@@ -196,6 +224,14 @@ export default function App() {
 
   function handleDeleteSelected() {
     if (!selectedZoneId) return;
+    if (selectedPlant) {
+      const plant = selectedPlant;
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
+      setZones((prev) => prev.filter((z) => z.plantId !== plant.id));
+      setSelectedZoneId(null);
+      void api.deletePlant(plant.id);
+      return;
+    }
     const idToDelete = selectedZoneId;
     setZones((prev) => prev.filter((z) => z.id !== idToDelete));
     setSelectedZoneId(null);
@@ -204,6 +240,7 @@ export default function App() {
 
   function handleClearAll() {
     setZones([]);
+    setPlants([]);
     setSelectedZoneId(null);
     void api.clearZones();
   }
@@ -229,6 +266,8 @@ export default function App() {
       return next;
     });
   }
+
+  const plantPoses: Record<string, PlantPose> = {};
 
   const lastMessage = events.length > 0 ? events[events.length - 1].message : null;
   const pendingAlerts = events.filter((e) => e.requiresAck && e.ackStatus === "PENDING");
@@ -285,6 +324,9 @@ export default function App() {
             onZoneCreate={handleZoneCreate}
             onZoneUpdate={handleZoneUpdate}
             onZoneSelect={setSelectedZoneId}
+            plants={plants}
+            plantPoses={plantPoses}
+            onPlantCreate={handlePlantCreate}
           />
           <Controls active={mode === "live"} speed={WORKER_SPEED_MPS} onMove={handleWorkerMove} />
         </div>
@@ -292,6 +334,7 @@ export default function App() {
         {mode === "setup" ? (
           <ZoneProperties
             zone={selectedZone}
+            plant={selectedPlant}
             onRename={(name) => patchSelected({ name })}
             onChangeType={(type) => patchSelected({ type })}
             onToggleActive={(active) => patchSelected({ active })}

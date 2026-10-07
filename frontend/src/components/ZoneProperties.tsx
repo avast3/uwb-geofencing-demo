@@ -1,7 +1,9 @@
-import type { Zone, ZoneType } from "../types";
+import type { Plant, Zone, ZoneType } from "../types";
 
 interface ZonePropertiesProps {
   zone: Zone | null;
+  /** Set when the selected zone belongs to a moving plant. */
+  plant: Plant | null;
   onRename: (name: string) => void;
   onChangeType: (type: ZoneType) => void;
   onToggleActive: (active: boolean) => void;
@@ -9,6 +11,7 @@ interface ZonePropertiesProps {
 
 export default function ZoneProperties({
   zone,
+  plant,
   onRename,
   onChangeType,
   onToggleActive,
@@ -18,6 +21,26 @@ export default function ZoneProperties({
       <div className="properties-panel">
         <h3>ZONE PROPERTIES</h3>
         <p className="properties-empty">No zone selected. Draw a zone, or select one with the Select tool.</p>
+      </div>
+    );
+  }
+
+  if (plant) {
+    return (
+      <div className="properties-panel">
+        <h3>MOVING PLANT</h3>
+        <div className="properties-row">
+          <span>Name</span>
+          <span className="properties-value">{plant.name}</span>
+        </div>
+        <div className="properties-row">
+          <span>Zones</span>
+          <span className="properties-value">Exclusion + Warning</span>
+        </div>
+        <p className="properties-empty">
+          Moves automatically during live simulation; its zones follow the
+          truck. Use Delete Zone to remove it.
+        </p>
       </div>
     );
   }

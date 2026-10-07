@@ -6,6 +6,8 @@ interface ZoneProps {
   isSelected: boolean;
   onBodyPointerDown: (e: React.PointerEvent, zoneId: string) => void;
   onHandlePointerDown: (e: React.PointerEvent, zoneId: string, handle: ResizeHandle) => void;
+  /** False for plant zones: selectable, but no move/resize handles. */
+  editable?: boolean;
 }
 
 const HANDLE_RADIUS = 6;
@@ -13,11 +15,12 @@ const HANDLE_RADIUS = 6;
 // Renders one zone (rectangle or circle) plus, when selected, the
 // move/resize handles. Pure presentation + pointer-event wiring — all
 // drag math lives in SiteMap, which owns the authoritative zone geometry.
-export default function Zone({ zone, isSelected, onBodyPointerDown, onHandlePointerDown }: ZoneProps) {
+export default function Zone({ zone, isSelected, onBodyPointerDown, onHandlePointerDown, editable = true }: ZoneProps) {
   const colourClass = zone.type === "exclusion" ? "zone-exclusion" : "zone-warning";
   const inactiveClass = zone.active ? "" : " zone-inactive";
   const selectedClass = isSelected ? " zone-selected" : "";
-  const className = `zone ${colourClass}${inactiveClass}${selectedClass}`;
+  const plantClass = zone.plantId ? " zone-plant" : "";
+  const className = `zone ${colourClass}${inactiveClass}${selectedClass}${plantClass}`;
 
   if (zone.shape === "rectangle") {
     const topLeft = metresToPixels(zone.xMin, zone.yMax);
@@ -45,7 +48,7 @@ export default function Zone({ zone, isSelected, onBodyPointerDown, onHandlePoin
         <text x={topLeft.x + 6} y={topLeft.y + 16} className="zone-label">
           {zone.name}
         </text>
-        {isSelected &&
+        {isSelected && editable &&
           corners.map((c) => (
             <circle
               key={c.handle}
@@ -77,7 +80,7 @@ export default function Zone({ zone, isSelected, onBodyPointerDown, onHandlePoin
       <text x={centre.x} y={centre.y - radiusPx - 8} textAnchor="middle" className="zone-label">
         {zone.name}
       </text>
-      {isSelected && (
+      {isSelected && editable && (
         <>
           <rect
             x={centre.x - HANDLE_RADIUS}

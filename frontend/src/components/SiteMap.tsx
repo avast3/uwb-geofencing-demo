@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import Anchor from "./Anchor";
 import ZoneComp from "./Zone";
 import WorkerComp from "./Worker";
+import PlantComp from "./Plant";
+import type { PlantPose } from "./Plant";
 import {
   ANCHORS,
   MARGIN_PX,
@@ -19,6 +21,7 @@ import {
 } from "../utils/coordinateTransform";
 import type {
   CircleZone,
+  Plant,
   RectangleZone,
   ResizeHandle,
   Tool,
@@ -46,6 +49,10 @@ interface SiteMapProps {
   onZoneCreate: (draft: ZoneDraft) => void;
   onZoneUpdate: (id: string, patch: ZonePatch) => void;
   onZoneSelect: (id: string | null) => void;
+  plants: Plant[];
+  /** Where to draw each truck (ground truth in live mode, backend position in setup). */
+  plantPoses: Record<string, PlantPose>;
+  onPlantCreate: (pointM: MetrePoint) => void;
 }
 
 type DragState =
@@ -156,6 +163,9 @@ export default function SiteMap({
   onZoneCreate,
   onZoneUpdate,
   onZoneSelect,
+  plants,
+  plantPoses,
+  onPlantCreate,
 }: SiteMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -276,6 +286,8 @@ export default function SiteMap({
     } else if (tool === "circle") {
       dragRef.current = { kind: "draw-circle", centreM: m, currentM: m };
       setPreview({ kind: "circle", centre: m, edge: m });
+    } else if (tool === "plant") {
+      onPlantCreate(m);
     } else {
       onZoneSelect(null);
     }
@@ -294,6 +306,12 @@ export default function SiteMap({
     e.stopPropagation();
     const zone = zones.find((z) => z.id === zoneId);
     if (!zone) return;
+    if (zone.plantId) {
+      // Plant zones follow their truck; select it, but never drag/resize.
+      const plant = plants.find((p) => p.id === zone.plantId);
+      onZoneSelect(plant ? plant.exclusionZoneId : zoneId);
+      return;
+    }
     onZoneSelect(zoneId);
     dragRef.current = {
       kind: "move",
@@ -395,19 +413,43 @@ export default function SiteMap({
       })}
 
       {/* Zones (rendered below anchors so anchors stay visible at corners) */}
-      {zones.map((zone) => (
-        <ZoneComp
-          key={zone.id}
-          zone={zone}
-          isSelected={zone.id === selectedZoneId && !locked}
-          onBodyPointerDown={handleBodyPointerDown}
-          onHandlePointerDown={handleHandlePointerDown}
-        />
-      ))}
+      {zones.map((zone) => {
+        const plant = zone.plantId ? plants.find((p) => p.id === zone.plantId) : undefined;
+        const selected = plant
+          ? selectedZoneId === plant.exclusionZoneId || selectedZoneId === plant.warningZoneId
+          : zone.id === selectedZoneId;
+        return (
+          <ZoneComp
+            key={zone.id}
+            zone={zone}
+            isSelected={selected && !locked}
+            editable={!zone.plantId}
+            onBodyPointerDown={handleBodyPointerDown}
+            onHandlePointerDown={handleHandlePointerDown}
+          />
+        );
+      })}
 
       {/* Live draw preview */}
       {preview && preview.kind === "rect" && <RectPreview a={preview.a} b={preview.b} />}
       {preview && preview.kind === "circle" && <CirclePreview centre={preview.centre} edge={preview.edge} />}
+
+      {/* Mobile plant, above zones so the truck is visible inside its own zones */}
+      {plants.map((plant) => {
+        const pose: PlantPose = plantPoses[plant.id] ?? {
+          x: plant.x,
+          y: plant.y,
+          direction: plant.heading === "vertical" ? "up" : "right",
+        };
+        return (
+          <PlantComp
+            key={plant.id}
+            plant={plant}
+            pose={pose}
+            onPointerDown={(e) => handleBodyPointerDown(e, plant.exclusionZoneId)}
+          />
+        );
+      })}
 
       {/* Anchors on top */}
       {ANCHORS.map((a) => (

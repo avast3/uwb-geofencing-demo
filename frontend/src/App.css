@@ -845,3 +845,36 @@
   color: #cbd5e1;
   border: 1px solid #475569;
 }
+
+/* --- Mobile plant --- */
+.plant {
+  cursor: pointer;
+}
+
+.plant-trailer {
+  fill: #facc15;
+  stroke: #713f12;
+  stroke-width: 1.5;
+}
+
+.plant-cab {
+  fill: #f97316;
+  stroke: #7c2d12;
+  stroke-width: 1.5;
+}
+
+.plant-windscreen {
+  fill: #0f172a;
+}
+
+.plant-label {
+  font-size: 10px;
+  font-weight: 700;
+  fill: #1c1917;
+  pointer-events: none;
+}
+
+.zone-plant {
+  stroke-dasharray: 6 4;
+  cursor: pointer;
+}
