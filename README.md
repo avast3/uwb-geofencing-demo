@@ -189,3 +189,24 @@ Integration with the site's existing CCTV is part of the proposed system:
 supervisors would check the relevant camera before acknowledging or
 escalating an alert. The demo represents this step with the camera popup,
 a labelled placeholder with no video or AI behind it.
+
+## Known limitation: supervisor console on a phone
+
+In the proposed system, supervisors would receive alerts on a phone. This
+was investigated for the demo but not implemented, for these reasons:
+
+- **School Wi-Fi blocks it.** Campus networks typically use *client
+  isolation*, which stops devices on the same Wi-Fi from connecting to
+  each other, so a phone cannot reach the laptop running the demo. This
+  was the main obstacle. The usual workaround is to connect the laptop to
+  the phone's personal hotspot, which wasn't practical to rely on here.
+- **The demo is built to run on one machine.** Both servers only accept
+  connections from the laptop itself, and the frontend calls the backend
+  at `localhost:8000` — which, on a phone, would point at the phone. Fixing
+  this is straightforward (expose the Vite dev server on the network and
+  proxy `/api` through it), but it is only useful once the network allows
+  the connection.
+
+The supervisor console itself (`/supervisor`) has no hard dependency on
+the site map page, so it could be moved to a phone without redesigning
+the alert flow.
