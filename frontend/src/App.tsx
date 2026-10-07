@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SiteMap from "./components/SiteMap";
 import ZoneToolbar from "./components/ZoneToolbar";
 import ZoneProperties from "./components/ZoneProperties";
@@ -57,18 +57,22 @@ export default function App() {
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [onlineAnchorIds, setOnlineAnchorIds] = useState<Set<string>>(() => new Set(ALL_ANCHOR_IDS));
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
-  const [, setRangeSampleTick] = useState(0); // write-only: just forces periodic re-renders below
+  const [rangeSampleTick, setRangeSampleTick] = useState(0); // drives periodic re-measurement below
   const zoneCounterRef = useRef(0);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
   const selectedPlant = selectedZone?.plantId ? plants.find((p) => p.id === selectedZone.plantId) ?? null : null;
   const hasActiveZone = zones.some((z) => z.active);
-  // Not memoized, so this recomputes on every render — including every
-  // movement frame and every rangeSampleTick below. A real UWB radio
-  // keeps re-measuring even while the tag is stationary, so the
-  // simulated ranges should too.
-  const anchorRanges =
-    mode === "live" ? computeAnchorRanges(workerPosition, ANCHORS, onlineAnchorIds, noiseEnabled) : [];
+  // Re-measured on every worker movement and every rangeSampleTick (4 Hz),
+  // so a stationary tag still gets fresh noisy readings like a real UWB
+  // radio. Memoized so unrelated re-renders (e.g. moving plant animation
+  // frames) don't re-roll the noise and make the readout flicker.
+  const anchorRanges = useMemo(
+    () => (mode === "live" ? computeAnchorRanges(workerPosition, ANCHORS, onlineAnchorIds, noiseEnabled) : []),
+    // rangeSampleTick is intentionally a dependency: it's the re-measure trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, workerPosition, onlineAnchorIds, noiseEnabled, rangeSampleTick]
+  );
   // Reconstructed from anchorRanges only — never from workerPosition
   // directly. This is the estimate a real geofence check would compare
   // against zones, not the ground truth.

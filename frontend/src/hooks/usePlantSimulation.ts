@@ -65,7 +65,9 @@ export function usePlantSimulation({
       for (const id of Object.keys(motions)) {
         if (!(id in next)) delete motions[id];
       }
-      setPoses(next);
+      // With no plants, keep the same empty object so React skips the
+      // re-render instead of repainting the whole app every frame.
+      setPoses((prev) => (Object.keys(next).length === 0 && Object.keys(prev).length === 0 ? prev : next));
       rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
