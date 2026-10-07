@@ -776,3 +776,72 @@
   padding-top: 16px;
   flex: 1;
 }
+
+/* --- Camera verification popup (placeholder) --- */
+.camera-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(2, 6, 23, 0.75);
+}
+
+.camera-modal {
+  width: min(640px, 100%);
+  background: #121a2b;
+  border: 1px solid #38bdf8;
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.camera-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.camera-modal-header h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+}
+
+.camera-modal-live {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.camera-feed-placeholder {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #020617;
+  border: 1px dashed #475569;
+  border-radius: 4px;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.camera-modal-details {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.camera-modal-cancel {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #475569;
+}

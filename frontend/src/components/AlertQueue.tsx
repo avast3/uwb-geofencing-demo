@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { LogEvent } from "../types";
+import CameraModal from "./CameraModal";
+import type { AlertAction } from "./CameraModal";
 
 interface AlertCardProps {
   alert: LogEvent;
@@ -9,6 +11,16 @@ interface AlertCardProps {
 
 function AlertCard({ alert, onAcknowledge, onEscalate }: AlertCardProps) {
   const [note, setNote] = useState("");
+  // Which action is awaiting confirmation in the camera popup, if any. The
+  // action is only sent to the backend on Confirm, so Cancel leaves the
+  // alert pending.
+  const [pendingAction, setPendingAction] = useState<AlertAction | null>(null);
+
+  function handleConfirm() {
+    if (pendingAction === "acknowledge") onAcknowledge(alert.eventId, note);
+    else if (pendingAction === "escalate") onEscalate(alert.eventId, note);
+    setPendingAction(null);
+  }
 
   return (
     <div className="alert-card">
@@ -27,13 +39,21 @@ function AlertCard({ alert, onAcknowledge, onEscalate }: AlertCardProps) {
         onChange={(e) => setNote(e.target.value)}
       />
       <div className="alert-card-actions">
-        <button className="alert-btn alert-btn-ack" onClick={() => onAcknowledge(alert.eventId, note)}>
+        <button className="alert-btn alert-btn-ack" onClick={() => setPendingAction("acknowledge")}>
           Acknowledge
         </button>
-        <button className="alert-btn alert-btn-escalate" onClick={() => onEscalate(alert.eventId, note)}>
+        <button className="alert-btn alert-btn-escalate" onClick={() => setPendingAction("escalate")}>
           Escalate
         </button>
       </div>
+      {pendingAction && (
+        <CameraModal
+          alert={alert}
+          action={pendingAction}
+          onConfirm={handleConfirm}
+          onCancel={() => setPendingAction(null)}
+        />
+      )}
     </div>
   );
 }

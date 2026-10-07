@@ -78,7 +78,11 @@ geofence verdict.
    browsers block audio until the page is clicked. Every exclusion-zone
    entry now shows up as a **SUPERVISOR ALERT** and the console repeats a
    *beep~ beep~* alarm until each alert is **Acknowledged** or
-   **Escalated** (use **ALARM ON/MUTED** to silence it). The **EVENT LOG**
+   **Escalated** (use **ALARM ON/MUTED** to silence it). Either button
+   first opens an **AI CAMERA** popup — a placeholder for the site's
+   existing CCTV, which in the proposed system would let the supervisor
+   visually verify the scene before deciding — and the action is only
+   recorded on **Confirm** (**Cancel** leaves it pending). The **EVENT LOG**
    below picks up `ENTERED`/`EXITED` lines as you cross zone boundaries —
    one line per actual crossing, not one per frame.
 5. **Toggle UWB Noise** (in the diagnostics panel) to see the cyan
@@ -136,7 +140,8 @@ backend/
 frontend/
   src/
     components/   SiteMap, Zone, Anchor, Worker, Controls, ZoneToolbar,
-                   ZoneProperties, StatusPanel, SystemStatus, EventLog
+                   ZoneProperties, StatusPanel, SystemStatus, EventLog,
+                   AlertQueue, CameraModal
     utils/        coordinateTransform.ts, ranging.ts, positioning.ts
     services/
       api.ts      all fetch calls + backend<->frontend field conversion
@@ -176,7 +181,11 @@ an oversight; redrawing a couple of zones takes seconds.
 
 ## Out of scope (by design)
 
-AI cameras, facial recognition, worker identity systems, cloud hosting,
-authentication, a mobile app, machine learning, a full 3D site, real UWB
-hardware, productivity monitoring. Existing CCTV integration is a
-plausible future extension, not part of this version.
+A live camera feed or AI video analysis, facial recognition, worker
+identity systems, cloud hosting, authentication, a mobile app, machine
+learning, a full 3D site, real UWB hardware, productivity monitoring.
+
+Integration with the site's existing CCTV is part of the proposed system:
+supervisors would check the relevant camera before acknowledging or
+escalating an alert. The demo represents this step with the camera popup,
+a labelled placeholder with no video or AI behind it.
