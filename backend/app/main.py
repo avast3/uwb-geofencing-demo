@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import events, geofence, state
 from .events import router as events_router
 from .models import PositionResult, PositionUpdate
+from .plants import router as plants_router
 from .zones import router as zones_router
 
 # 2D trilateration is mathematically impossible below 3 anchors — see
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(zones_router)
 app.include_router(events_router)
+app.include_router(plants_router)
 
 
 @app.get("/api/health")

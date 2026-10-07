@@ -18,6 +18,9 @@ class ZoneBase(BaseModel):
     name: str
     type: ZoneType
     active: bool = True
+    # Set only for zones owned by a moving plant (see plants.py); their
+    # geometry is derived from the plant's position, never edited directly.
+    plant_id: Optional[str] = None
 
 
 class RectangleFields(BaseModel):
@@ -119,3 +122,37 @@ class Event(BaseModel):
 
 class EventAction(BaseModel):
     action_note: Optional[str] = None
+
+
+PlantHeading = Literal["horizontal", "vertical"]
+
+
+class PlantCreate(BaseModel):
+    x: float
+    y: float
+
+
+class PlantPosition(BaseModel):
+    """A plant's UWB-estimated position (not ground truth), like the
+    worker's PositionUpdate."""
+
+    x: float
+    y: float
+    heading: PlantHeading
+
+
+class Plant(BaseModel):
+    plant_id: str
+    name: str
+    x: float
+    y: float
+    heading: PlantHeading
+    home_x: float
+    home_y: float
+    exclusion_zone_id: str
+    warning_zone_id: str
+
+
+class PlantWithZones(BaseModel):
+    plant: Plant
+    zones: List[Zone]

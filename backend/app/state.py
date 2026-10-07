@@ -6,7 +6,7 @@ backend process restarts, which is an explicitly accepted trade-off.
 
 from typing import Dict, List, Optional, Set
 
-from .models import Event, Zone
+from .models import Event, Plant, Zone
 
 _zones: Dict[str, "Zone"] = {}
 _id_counter = 0
@@ -17,6 +17,9 @@ _event_counter = 0
 # Which zone_ids each tag was inside as of its last position update, so a
 # transition can be detected (entered/exited) without re-deriving history.
 _tag_zone_membership: Dict[str, Set[str]] = {}
+
+_plants: Dict[str, "Plant"] = {}
+_plant_counter = 0
 
 
 def _letter(n: int) -> str:
@@ -53,7 +56,10 @@ def delete_zone(zone_id: str) -> bool:
 
 
 def clear_zones() -> None:
+    # Plant zones live in _zones too, so clearing zones must clear their
+    # plants or a plant would be left pointing at zones that don't exist.
     _zones.clear()
+    _plants.clear()
 
 
 def next_event_id() -> str:
@@ -95,3 +101,25 @@ def get_zone_membership(tag_id: str) -> Set[str]:
 
 def set_zone_membership(tag_id: str, zone_ids: Set[str]) -> None:
     _tag_zone_membership[tag_id] = set(zone_ids)
+
+
+def next_plant_number() -> int:
+    global _plant_counter
+    _plant_counter += 1
+    return _plant_counter
+
+
+def list_plants() -> List["Plant"]:
+    return list(_plants.values())
+
+
+def get_plant(plant_id: str) -> Optional["Plant"]:
+    return _plants.get(plant_id)
+
+
+def save_plant(plant: "Plant") -> None:
+    _plants[plant.plant_id] = plant
+
+
+def delete_plant(plant_id: str) -> Optional["Plant"]:
+    return _plants.pop(plant_id, None)

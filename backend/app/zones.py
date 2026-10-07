@@ -20,8 +20,15 @@ def _to_stored(zone_in: ZoneIn, zone_id: str):
     return CircleZone(**data, zone_id=zone_id)
 
 
+def _reject_plant_zone(zone) -> None:
+    if zone.plant_id is not None:
+        raise HTTPException(status_code=409, detail="Plant zones are managed through /api/plants")
+
+
 @router.post("", response_model=Zone)
 def create_zone(zone_in: ZoneIn):
+    if zone_in.plant_id is not None:
+        raise HTTPException(status_code=400, detail="Plant zones are created through /api/plants")
     zone_id = state.next_zone_id()
     zone = _to_stored(zone_in, zone_id)
     state.save_zone(zone)
@@ -38,6 +45,7 @@ def update_zone(zone_id: str, zone_in: ZoneIn):
     existing = state.get_zone(zone_id)
     if existing is None:
         raise HTTPException(status_code=404, detail="Zone not found")
+    _reject_plant_zone(existing)
     if existing.shape != zone_in.shape:
         raise HTTPException(status_code=400, detail="Cannot change a zone's shape")
     zone = _to_stored(zone_in, zone_id)
@@ -47,8 +55,11 @@ def update_zone(zone_id: str, zone_in: ZoneIn):
 
 @router.delete("/{zone_id}")
 def delete_zone(zone_id: str):
-    if not state.delete_zone(zone_id):
+    existing = state.get_zone(zone_id)
+    if existing is None:
         raise HTTPException(status_code=404, detail="Zone not found")
+    _reject_plant_zone(existing)
+    state.delete_zone(zone_id)
     return {"zone_id": zone_id, "deleted": True}
 
 
