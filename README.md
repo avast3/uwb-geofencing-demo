@@ -1,7 +1,8 @@
 # UWB Construction-Site Geofencing Demo
 
-A local, interactive proof-of-concept for a university engineering design
-project proposing a UWB-based construction-site geofencing safety system.
+A local, interactive **software proof of concept with simulated UWB
+hardware**, built for a university engineering design project proposing a
+UWB-based construction-site geofencing safety system.
 
 A supervisor draws hazard zones on a digital site map. A worker, driven
 around the site with WASD, is "measured" by four simulated UWB anchors.
