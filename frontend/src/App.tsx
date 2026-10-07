@@ -10,6 +10,7 @@ import { ANCHORS, SITE_HEIGHT_M, SITE_WIDTH_M, clampToSite } from "./utils/coord
 import type { MetrePoint } from "./utils/coordinateTransform";
 import { clampPlacement } from "./utils/plantMotion";
 import type { PlantPose } from "./components/Plant";
+import { usePlantSimulation } from "./hooks/usePlantSimulation";
 import { computeAnchorRanges } from "./utils/ranging";
 import { estimatePosition } from "./utils/positioning";
 import type { AppMode, LogEvent, Plant, PositionResult, Tool, Zone, ZoneDraft, ZonePatch } from "./types";
@@ -252,9 +253,22 @@ export default function App() {
     setWorkerPosition((prev) => clampToSite({ x: prev.x + dxM, y: prev.y + dyM }));
   }
 
-  function handleStartSimulation() {
+  // Sends every plant back to where it was placed. Failures (backend
+  // offline) are ignored: the plant keeps its last zones until the next
+  // reset succeeds.
+  async function resetPlantsHome() {
+    const results = await Promise.all(plants.map((p) => api.resetPlant(p.id)));
+    const ok = results.filter((r) => r !== null);
+    if (ok.length === 0) return;
+    const byId = new Map(ok.map((r) => [r.plant.id, r.plant]));
+    setPlants((prev) => prev.map((p) => byId.get(p.id) ?? p));
+    mergeZones(ok.flatMap((r) => r.zones));
+  }
+
+  async function handleStartSimulation() {
     setWorkerPosition(WORKER_START_POSITION);
     setOnlineAnchorIds(new Set(ALL_ANCHOR_IDS));
+    await resetPlantsHome();
     setMode("live");
   }
 
@@ -267,7 +281,20 @@ export default function App() {
     });
   }
 
-  const plantPoses: Record<string, PlantPose> = {};
+  function handlePlantGone(plantId: string) {
+    setPlants((prev) => prev.filter((p) => p.id !== plantId));
+    setZones((prev) => prev.filter((z) => z.plantId !== plantId));
+  }
+
+  const livePlantPoses = usePlantSimulation({
+    active: mode === "live",
+    plants,
+    onlineAnchorIds,
+    noiseEnabled,
+    onZonesUpdated: mergeZones,
+    onPlantGone: handlePlantGone,
+  });
+  const plantPoses: Record<string, PlantPose> = mode === "live" ? livePlantPoses : {};
 
   const lastMessage = events.length > 0 ? events[events.length - 1].message : null;
   const pendingAlerts = events.filter((e) => e.requiresAck && e.ackStatus === "PENDING");
