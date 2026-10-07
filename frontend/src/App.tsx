@@ -272,6 +272,14 @@ export default function App() {
     setMode("live");
   }
 
+  // Back to zone setup. Events and pending alerts are kept so the
+  // supervisor can still resolve them. Switches mode first so the plants
+  // stop immediately, then sends them home.
+  function handleEndSimulation() {
+    setMode("setup");
+    void resetPlantsHome();
+  }
+
   function handleAnchorToggle(anchorId: string) {
     setOnlineAnchorIds((prev) => {
       const next = new Set(prev);
@@ -438,10 +446,6 @@ export default function App() {
                   <span className="properties-value">{r.distance.toFixed(2)} m</span>
                 </div>
               ))}
-
-              <button className="toolbar-btn" onClick={() => setMode("setup")}>
-                EDIT ZONES
-              </button>
             </div>
           </div>
         )}
@@ -460,6 +464,11 @@ export default function App() {
             title={hasActiveZone ? "" : "Create at least one active zone first"}
           >
             START SIMULATION
+          </button>
+        )}
+        {mode === "live" && (
+          <button className="start-simulation-btn end-simulation-btn" onClick={handleEndSimulation}>
+            END SIMULATION
           </button>
         )}
       </footer>

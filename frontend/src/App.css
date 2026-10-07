@@ -878,3 +878,8 @@
   stroke-dasharray: 6 4;
   cursor: pointer;
 }
+
+.end-simulation-btn {
+  background: #dc2626;
+  color: #fef2f2;
+}
