@@ -6,6 +6,10 @@
 import type {
   AckStatus,
   LogEvent,
+  Plant,
+  PlantHeading,
+  PlantUpdateResult,
+  PlantWithZones,
   PositionResult,
   SafetyState,
   Zone,
@@ -21,6 +25,7 @@ interface BackendZoneCommon {
   name: string;
   type: ZoneType;
   active: boolean;
+  plant_id?: string | null;
 }
 
 interface BackendRectangleZone extends BackendZoneCommon {
@@ -47,6 +52,7 @@ function fromBackend(z: BackendZone): Zone {
       name: z.name,
       type: z.type,
       active: z.active,
+    plantId: z.plant_id ?? null,
       shape: "rectangle",
       xMin: z.x_min,
       xMax: z.x_max,
@@ -59,6 +65,7 @@ function fromBackend(z: BackendZone): Zone {
     name: z.name,
     type: z.type,
     active: z.active,
+    plantId: z.plant_id ?? null,
     shape: "circle",
     centreX: z.centre_x,
     centreY: z.centre_y,
@@ -239,4 +246,89 @@ export function acknowledgeEvent(eventId: string, actionNote: string): Promise<L
 
 export function escalateEvent(eventId: string, actionNote: string): Promise<LogEvent | null> {
   return resolveEvent(eventId, "escalate", actionNote);
+}
+
+interface BackendPlant {
+  plant_id: string;
+  name: string;
+  x: number;
+  y: number;
+  heading: PlantHeading;
+  home_x: number;
+  home_y: number;
+  exclusion_zone_id: string;
+  warning_zone_id: string;
+}
+
+interface BackendPlantWithZones {
+  plant: BackendPlant;
+  zones: BackendZone[];
+}
+
+function fromBackendPlant(p: BackendPlant): Plant {
+  return {
+    id: p.plant_id,
+    name: p.name,
+    x: p.x,
+    y: p.y,
+    heading: p.heading,
+    homeX: p.home_x,
+    homeY: p.home_y,
+    exclusionZoneId: p.exclusion_zone_id,
+    warningZoneId: p.warning_zone_id,
+  };
+}
+
+function fromBackendPlantWithZones(r: BackendPlantWithZones): PlantWithZones {
+  return { plant: fromBackendPlant(r.plant), zones: r.zones.map(fromBackend) };
+}
+
+export async function getPlants(): Promise<Plant[]> {
+  const result = await request<BackendPlant[]>("/api/plants");
+  return (result ?? []).map(fromBackendPlant);
+}
+
+export async function createPlant(x: number, y: number): Promise<PlantWithZones | null> {
+  const result = await request<BackendPlantWithZones>("/api/plants", {
+    method: "POST",
+    body: JSON.stringify({ x, y }),
+  });
+  return result ? fromBackendPlantWithZones(result) : null;
+}
+
+// Sends the plant's estimated UWB position. Unlike request(), this
+// distinguishes 404 (plant deleted elsewhere, e.g. Clear Zones in another
+// window) from a transient failure, so the caller can drop the plant
+// instead of retrying it 5x/sec forever.
+export async function postPlantPosition(
+  id: string,
+  x: number,
+  y: number,
+  heading: PlantHeading
+): Promise<PlantUpdateResult> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/plants/${id}/position`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x, y, heading }),
+    });
+    if (res.status === 404) return { kind: "gone" };
+    if (!res.ok) return { kind: "error" };
+    const body = fromBackendPlantWithZones((await res.json()) as BackendPlantWithZones);
+    return { kind: "ok", ...body };
+  } catch {
+    return { kind: "error" };
+  }
+}
+
+export async function resetPlant(id: string): Promise<PlantWithZones | null> {
+  const result = await request<BackendPlantWithZones>(`/api/plants/${id}/reset`, { method: "POST" });
+  return result ? fromBackendPlantWithZones(result) : null;
+}
+
+export async function deletePlant(id: string): Promise<boolean> {
+  const result = await request<{ plant_id: string; deleted: boolean }>(`/api/plants/${id}`, {
+    method: "DELETE",
+  });
+  return result?.deleted === true;
 }

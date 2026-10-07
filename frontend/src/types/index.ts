@@ -11,6 +11,8 @@ export interface BaseZone {
   name: string;
   type: ZoneType;
   active: boolean;
+  /** Set for zones owned by a moving plant; their geometry follows the plant. */
+  plantId?: string | null;
 }
 
 export interface RectangleZone extends BaseZone {
@@ -30,7 +32,7 @@ export interface CircleZone extends BaseZone {
 
 export type Zone = RectangleZone | CircleZone;
 
-export type Tool = "select" | "rectangle" | "circle";
+export type Tool = "select" | "rectangle" | "circle" | "plant";
 
 // ZONE SETUP MODE (drawing/editing zones) vs LIVE SIMULATION MODE.
 export type AppMode = "setup" | "live";
@@ -92,3 +94,27 @@ export interface LogEvent {
   actionNote: string | null;
   clearedAt: string | null;
 }
+
+export interface Plant {
+  id: string;
+  name: string;
+  /** Last position the backend holds (UWB estimate), metres. */
+  x: number;
+  y: number;
+  heading: PlantHeading;
+  /** Where it was placed; END SIMULATION returns it here. */
+  homeX: number;
+  homeY: number;
+  exclusionZoneId: string;
+  warningZoneId: string;
+}
+
+export interface PlantWithZones {
+  plant: Plant;
+  zones: Zone[];
+}
+
+export type PlantUpdateResult =
+  | { kind: "ok"; plant: Plant; zones: Zone[] }
+  | { kind: "gone" }
+  | { kind: "error" };
