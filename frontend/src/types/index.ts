@@ -4,6 +4,7 @@
 
 export type ZoneType = "warning" | "exclusion";
 export type ZoneShape = "rectangle" | "circle";
+export type PlantHeading = "horizontal" | "vertical";
 
 export interface BaseZone {
   id: string;
