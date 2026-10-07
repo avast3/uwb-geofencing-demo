@@ -12,6 +12,17 @@ whether the worker is SAFE, in a WARNING zone, or in BREACH of an
 exclusion zone. Zone entries/exits are logged as events, and anchors can
 be switched offline to demonstrate graceful degradation.
 
+### What's simulated and what's representative
+
+Only the hardware layer is simulated: there are no UWB radios or wearable
+tags, so anchor ranges are generated in the browser from the worker's
+position. Everything downstream of those ranges — multilateration, the
+SAFE/WARNING/BREACH geofence logic, and the event logging and supervisor
+alert flow — reflects how a deployed system would behave. The backend's
+infrastructure is deliberately simplified for the demo: data is held in
+memory rather than a database, a single tag (TAG-001) is tracked, and there
+is no authentication.
+
 > This system supplements physical exclusion controls, spotters, SWMS and
 > site supervision. It does not replace them.
 
