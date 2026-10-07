@@ -47,6 +47,13 @@ npm install     # first time only
 npm run dev
 ```
 
+**Tests** (optional):
+
+```bash
+cd backend && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest -q
+cd frontend && npm test
+```
+
 Then open:
 
 - Frontend: <http://localhost:5173>
@@ -64,10 +71,14 @@ geofence verdict.
    **Type** (Warning/Exclusion), and confirm **Active** is checked. One
    active exclusion zone is enough to proceed. A warning zone drawn
    around (or overlapping) an exclusion zone demonstrates the priority
-   rule below.
+   rule below. Or pick **🚛 Moving Plant** and click the site to place a
+   semi-truck; its exclusion zone and warning ring are fixed to it (place
+   as many as you like).
 2. **Press START SIMULATION.** The toolbar collapses, zone geometry
    locks, and TAG-001 (a little hard-hat worker) appears at the site
-   centre.
+   centre. Any moving plant starts driving in straight lines, and its
+   zones follow it — if a truck drives into the worker, that's a zone
+   entry like any other.
 3. **Drive the worker** with **WASD** or the arrow keys. Watch the
    **TAG-001 STATUS** panel: the LED is off/grey while SAFE, glows amber
    in a Warning zone, glows red in an Exclusion zone. If a zone overlaps
@@ -93,7 +104,8 @@ geofence verdict.
    remain online, the status panel shows **SYSTEM DEGRADED** / **POSITION
    UNAVAILABLE** — never a false SAFE. Click the anchor again to restore
    it.
-7. **EDIT ZONES** returns to setup mode (locking the worker in place);
+7. **END SIMULATION** (footer) returns to setup mode and sends every
+   moving plant back to where it was placed;
    **START SIMULATION** again resets the worker position and brings all
    anchors back online.
 
@@ -124,6 +136,21 @@ what the backend returns. The backend never sees the ground-truth
 position, only the frontend's UWB estimate, matching how the real system
 would actually work.
 
+Moving plant follows the same path as the worker, with the backend owning
+its zones:
+
+```
+plant motion (ground truth)                         [frontend, utils/plantMotion.ts]
+      v
+simulated UWB ranges -> multilateration -> estimate [frontend, hooks/usePlantSimulation.ts]
+      v
+POST /api/plants/{id}/position {x, y, heading}  ~5x/sec per plant
+      v
+backend re-derives the plant's exclusion + warning zones  [backend, plants.py]
+      v
+worker positions are classified against the moved zones (unchanged geofence/events)
+```
+
 ## Project structure
 
 ```
@@ -135,14 +162,19 @@ backend/
     zones.py      /api/zones CRUD router
     geofence.py   point-in-rectangle/circle, classify(), contained_zone_ids()
     events.py     /api/events router + ENTERED/EXITED transition detection
+    plants.py     /api/plants router + moving plant zone geometry
+  tests/          pytest suite (pip install -r requirements-dev.txt)
   requirements.txt
 
 frontend/
   src/
     components/   SiteMap, Zone, Anchor, Worker, Controls, ZoneToolbar,
                    ZoneProperties, StatusPanel, SystemStatus, EventLog,
-                   AlertQueue, CameraModal
-    utils/        coordinateTransform.ts, ranging.ts, positioning.ts
+                   AlertQueue, CameraModal, Plant
+    hooks/
+      usePlantSimulation.ts  live-mode truck motion + UWB position posting
+    utils/        coordinateTransform.ts, ranging.ts, positioning.ts,
+                   plantMotion.ts (+ plantMotion.test.ts)
     services/
       api.ts      all fetch calls + backend<->frontend field conversion
     types/
@@ -169,6 +201,11 @@ docs/superpowers/specs/   design spec this project was built from
 | `POST /api/position`           | `{tag_id, x, y, anchors_active}` -> `{state, zone_id, anchors_online, degraded}` |
 | `GET /api/events`              | List logged ENTERED/EXITED transitions |
 | `DELETE /api/events`           | Clear the event log |
+| `POST /api/plants`                    | Place a moving plant at `{x, y}`; creates its exclusion + warning zones |
+| `GET /api/plants`                     | List moving plants |
+| `POST /api/plants/{plant_id}/position` | `{x, y, heading}` — plant's UWB-estimated position; zones are re-derived |
+| `POST /api/plants/{plant_id}/reset`    | Return a plant to where it was placed |
+| `DELETE /api/plants/{plant_id}`        | Remove a plant and its zones |
 
 Full interactive docs (including request/response schemas) are always at
 `http://localhost:8000/docs` while the backend is running.
