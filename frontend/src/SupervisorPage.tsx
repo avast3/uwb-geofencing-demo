@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import EventLog from "./components/EventLog";
 import AlertQueue from "./components/AlertQueue";
+import VerificationNotice from "./components/VerificationNotice";
 import * as api from "./services/api";
 import { useAlarm } from "./utils/alarm";
 import type { LogEvent } from "./types";
@@ -91,6 +92,7 @@ export default function SupervisorPage() {
       </header>
 
       <div className="event-log-section supervisor-section">
+        <VerificationNotice />
         <AlertQueue alerts={pendingAlerts} onAcknowledge={handleAcknowledgeAlert} onEscalate={handleEscalateAlert} />
         <EventLog events={events} onClear={handleClearEvents} />
       </div>

@@ -95,7 +95,12 @@ geofence verdict.
    first opens an **AI CAMERA** popup — a placeholder for the site's
    existing CCTV, which in the proposed system would let the supervisor
    visually verify the scene before deciding — and the action is only
-   recorded on **Confirm** (**Cancel** leaves it pending). The **EVENT LOG**
+   recorded on **Confirm** (**Cancel** leaves it pending). At the top of
+   the console, a **"Zone 1 · unable to verify"** notice with a **Mark
+   checked** button shows how the proposed system handles a zone whose
+   tag, camera or network data is missing: it asks a supervisor to check
+   in person instead of showing a false all-clear. Like the camera popup,
+   it's a placeholder with fixed text, not driven by live data. The **EVENT LOG**
    below picks up `ENTERED`/`EXITED` lines as you cross zone boundaries —
    one line per actual crossing, not one per frame.
 5. **Toggle UWB Noise** (in the diagnostics panel) to see the cyan
@@ -192,7 +197,7 @@ frontend/
   src/
     components/   SiteMap, Zone, Anchor, Worker, Controls, ZoneToolbar,
                    ZoneProperties, StatusPanel, SystemStatus, EventLog,
-                   AlertQueue, CameraModal, Plant
+                   AlertQueue, CameraModal, Plant, VerificationNotice
     hooks/
       usePlantSimulation.ts  live-mode truck motion + UWB position posting
     utils/        coordinateTransform.ts, ranging.ts, positioning.ts,

@@ -883,3 +883,36 @@
   background: #dc2626;
   color: #fef2f2;
 }
+
+/* --- "Unable to verify" notice (placeholder) --- */
+.verify-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1e293b;
+  border: 1px solid #64748b;
+  border-left: 4px solid #94a3b8;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.verify-notice.checked {
+  border-left-color: #22c55e;
+  color: #94a3b8;
+}
+
+.verify-notice-btn {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  background: #0f172a;
+  border: 1px solid #cbd5e1;
+  color: #e2e8f0;
+  cursor: pointer;
+}
