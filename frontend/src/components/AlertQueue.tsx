@@ -25,7 +25,7 @@ function AlertCard({ alert, onAcknowledge, onEscalate }: AlertCardProps) {
   return (
     <div className="alert-card">
       <div className="alert-card-header">
-        <span className="alert-card-title">RED ZONE ENTRY</span>
+        <span className="alert-card-title">Red zone entry</span>
         <span className="alert-card-time">{alert.timestamp}</span>
       </div>
       <div className="alert-card-body">
@@ -71,7 +71,10 @@ interface AlertQueueProps {
 export default function AlertQueue({ alerts, onAcknowledge, onEscalate }: AlertQueueProps) {
   return (
     <div className="alert-queue">
-      <h3>SUPERVISOR ALERTS</h3>
+      <div className="alert-queue-header">
+        <h3>Supervisor alerts</h3>
+        {alerts.length > 0 && <span className="alert-count">{alerts.length} pending</span>}
+      </div>
       {alerts.length === 0 ? (
         <p className="properties-empty">No pending alerts.</p>
       ) : (

@@ -29,27 +29,27 @@ export default function ZoneToolbar({
         className={tool === "rectangle" ? "toolbar-btn active" : "toolbar-btn"}
         onClick={() => onToolChange("rectangle")}
       >
-        Rectangle Zone
+        Rectangle zone
       </button>
       <button
         className={tool === "circle" ? "toolbar-btn active" : "toolbar-btn"}
         onClick={() => onToolChange("circle")}
       >
-        Circle Zone
+        Circle zone
       </button>
       <button
         className={tool === "plant" ? "toolbar-btn active" : "toolbar-btn"}
         onClick={() => onToolChange("plant")}
         title="Click the site to place a semi-truck whose zones move with it"
       >
-        🚛 Moving Plant
+        Moving plant
       </button>
       <span className="toolbar-divider" />
       <button className="toolbar-btn danger" disabled={!hasSelection} onClick={onDeleteSelected}>
-        Delete Zone
+        Delete
       </button>
       <button className="toolbar-btn danger" disabled={!hasZones} onClick={onClearAll}>
-        Clear Zones
+        Clear all
       </button>
     </div>
   );

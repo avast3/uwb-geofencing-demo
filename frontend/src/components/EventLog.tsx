@@ -24,7 +24,7 @@ export default function EventLog({ events, onClear }: EventLogProps) {
   return (
     <div className="event-log">
       <div className="event-log-header">
-        <h3>EVENT LOG</h3>
+        <h3>Event log</h3>
         <button className="toolbar-btn danger" disabled={events.length === 0} onClick={onClear}>
           Clear Events
         </button>

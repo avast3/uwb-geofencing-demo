@@ -65,29 +65,29 @@ export default function SupervisorPage() {
   }
 
   const backendLabel =
-    backendOnline === null ? "BACKEND: CHECKING..." : backendOnline ? "BACKEND: CONNECTED" : "BACKEND: OFFLINE";
+    backendOnline === null ? "Checking backend…" : backendOnline ? "Backend connected" : "Backend offline";
   const backendClass =
     backendOnline === null ? "backend-badge checking" : backendOnline ? "backend-badge online" : "backend-badge offline";
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>SUPERVISOR CONSOLE</h1>
+        <h1>Supervisor console</h1>
         <div className="header-badges">
           {alarm.enabled ? (
             <button
               className={`alarm-btn${alarm.sounding ? " sounding" : ""}`}
               onClick={() => alarm.setMuted(!alarm.muted)}
             >
-              {alarm.muted ? "🔇 ALARM MUTED" : "🔊 ALARM ON"}
+              {alarm.muted ? "Alarm muted" : "Alarm on"}
             </button>
           ) : (
             <button className="alarm-btn needs-enable" onClick={alarm.enable}>
-              🔈 ENABLE ALARM SOUND
+              Enable alarm sound
             </button>
           )}
           <span className={backendClass}>{backendLabel}</span>
-          <span className="mode-badge">TAG-001 MONITOR</span>
+          <span className="mode-badge">Monitoring TAG-001</span>
         </div>
       </header>
 

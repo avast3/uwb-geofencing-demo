@@ -60,39 +60,39 @@ Then open:
 - Frontend: <http://localhost:5173>
 - Backend API docs (Swagger UI): <http://localhost:8000/docs>
 
-The header's **BACKEND: CONNECTED/OFFLINE** badge confirms the two sides
-can see each other. If it says OFFLINE, check the backend terminal for
+The header's **Backend connected/offline** indicator confirms the two sides
+can see each other. If it says offline, check the backend terminal for
 errors — the frontend keeps running either way, it just can't get a
 geofence verdict.
 
 ## Demo walkthrough
 
-1. **Draw a hazard zone.** Pick **Rectangle Zone** or **Circle Zone** and
+1. **Draw a hazard zone.** Pick **Rectangle zone** or **Circle zone** and
    click-drag on the site. The zone auto-selects; rename it, set its
    **Type** (Warning/Exclusion), and confirm **Active** is checked. One
    active exclusion zone is enough to proceed. A warning zone drawn
    around (or overlapping) an exclusion zone demonstrates the priority
-   rule below. Or pick **🚛 Moving Plant** and click the site to place a
+   rule below. Or pick **Moving plant** and click the site to place a
    semi-truck; its circular exclusion zone and warning ring are fixed to
    it (place
    as many as you like).
-2. **Press START SIMULATION.** The toolbar collapses, zone geometry
+2. **Press Start simulation.** The toolbar collapses, zone geometry
    locks, and TAG-001 (a little hard-hat worker) appears at the site
    centre. Any moving plant starts driving in straight lines, and its
    zones follow it — if a truck drives into the worker, that's a zone
    entry like any other.
 3. **Drive the worker** with **WASD** or the arrow keys. Watch the
-   **TAG-001 STATUS** panel: the LED is off/grey while SAFE, glows amber
+   **Worker TAG-001** panel: the LED is off/grey while SAFE, glows amber
    in a Warning zone, glows red in an Exclusion zone. If a zone overlaps
    both types, **Exclusion (BREACH) always wins**.
-4. **Open the supervisor console.** Click the **SUPERVISOR: N PENDING ↗**
+4. **Open the supervisor console.** Click the **Supervisor · N pending ↗**
    badge in the header (or go to <http://localhost:5173/supervisor>) and
-   put that window beside the map. Click **ENABLE ALARM SOUND** once —
+   put that window beside the map. Click **Enable alarm sound** once —
    browsers block audio until the page is clicked. Every exclusion-zone
-   entry now shows up as a **SUPERVISOR ALERT** and the console repeats a
+   entry now shows up as a **supervisor alert** and the console repeats a
    *beep~ beep~* alarm until each alert is **Acknowledged** or
-   **Escalated** (use **ALARM ON/MUTED** to silence it). Either button
-   first opens an **AI CAMERA** popup — a placeholder for the site's
+   **Escalated** (use **Alarm on/muted** to silence it). Either button
+   first opens an **AI camera** popup — a placeholder for the site's
    existing CCTV, which in the proposed system would let the supervisor
    visually verify the scene before deciding — and the action is only
    recorded on **Confirm** (**Cancel** leaves it pending). At the top of
@@ -100,20 +100,20 @@ geofence verdict.
    checked** button shows how the proposed system handles a zone whose
    tag, camera or network data is missing: it asks a supervisor to check
    in person instead of showing a false all-clear. Like the camera popup,
-   it's a placeholder with fixed text, not driven by live data. The **EVENT LOG**
+   it's a placeholder with fixed text, not driven by live data. The **Event log**
    below picks up `ENTERED`/`EXITED` lines as you cross zone boundaries —
    one line per actual crossing, not one per frame.
 5. **Toggle UWB Noise** (in the diagnostics panel) to see the cyan
-   "estimated position" cross (enable **Show UWB Estimate** first) wobble
+   "estimated position" cross (enable **Show UWB estimate** first) wobble
    a few centimetres around the worker instead of overlapping it exactly.
 6. **Click an anchor** (A1–A4) on the map to take it offline. Watch
-   **SYSTEM STATUS**: Anchors drops below 4/4, and once fewer than 3
-   remain online, the status panel shows **SYSTEM DEGRADED** / **POSITION
-   UNAVAILABLE** — never a false SAFE. Click the anchor again to restore
+   **System status**: Anchors drops below 4/4, and once fewer than 3
+   remain online, the status panel shows **Degraded** / **Position
+   unavailable** — never a false SAFE. Click the anchor again to restore
    it.
-7. **END SIMULATION** (footer) returns to setup mode and sends every
+7. **End simulation** (footer) returns to setup mode and sends every
    moving plant back to where it was placed;
-   **START SIMULATION** again resets the worker position and brings all
+   **Start simulation** again resets the worker position and brings all
    anchors back online.
 
 ## Architecture

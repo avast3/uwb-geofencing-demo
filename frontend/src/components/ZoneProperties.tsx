@@ -19,7 +19,7 @@ export default function ZoneProperties({
   if (!zone) {
     return (
       <div className="properties-panel">
-        <h3>ZONE PROPERTIES</h3>
+        <h3>Zone properties</h3>
         <p className="properties-empty">No zone selected. Draw a zone, or select one with the Select tool.</p>
       </div>
     );
@@ -28,7 +28,7 @@ export default function ZoneProperties({
   if (plant) {
     return (
       <div className="properties-panel">
-        <h3>MOVING PLANT</h3>
+        <h3>Moving plant</h3>
         <div className="properties-row">
           <span>Name</span>
           <span className="properties-value">{plant.name}</span>
@@ -39,7 +39,7 @@ export default function ZoneProperties({
         </div>
         <p className="properties-empty">
           Moves automatically during live simulation; its zones follow the
-          truck. Use Delete Zone to remove it.
+          truck. Use Delete to remove it.
         </p>
       </div>
     );
@@ -47,7 +47,7 @@ export default function ZoneProperties({
 
   return (
     <div className="properties-panel">
-      <h3>ZONE PROPERTIES</h3>
+      <h3>Zone properties</h3>
 
       <label className="properties-row">
         <span>Name</span>

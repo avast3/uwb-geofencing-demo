@@ -18,12 +18,12 @@ export default function SystemStatus({
   lastUpdate,
   lastMessage,
 }: SystemStatusProps) {
-  const backendLabel = backendOnline === null ? "CHECKING..." : backendOnline ? "CONNECTED" : "OFFLINE";
+  const backendLabel = backendOnline === null ? "Checking…" : backendOnline ? "Connected" : "Offline";
   const backendClass = backendOnline === null ? "status-pending" : backendOnline ? "status-good" : "status-bad";
 
   return (
     <div className="status-panel">
-      <h3>SYSTEM STATUS</h3>
+      <h3>System status</h3>
       <div className="properties-row">
         <span>Backend</span>
         <span className={`properties-value ${backendClass}`}>{backendLabel}</span>
@@ -31,21 +31,21 @@ export default function SystemStatus({
       <div className="properties-row">
         <span>Gateway</span>
         <span className={`properties-value ${gatewayOnline ? "status-good" : "status-bad"}`}>
-          {gatewayOnline ? "ONLINE" : "OFFLINE"}
+          {gatewayOnline ? "Online" : "Offline"}
         </span>
       </div>
       <div className="properties-row">
         <span>Anchors</span>
         <span className={`properties-value ${anchorsOnlineCount < 3 ? "status-bad" : "status-good"}`}>
-          {anchorsOnlineCount} / {totalAnchors} ONLINE
+          {anchorsOnlineCount} / {totalAnchors} online
         </span>
       </div>
       <div className="properties-row">
-        <span>Last Update</span>
+        <span>Last update</span>
         <span className="properties-value">{lastUpdate ?? "—"}</span>
       </div>
       <div className="properties-row">
-        <span>Last Message</span>
+        <span>Last message</span>
         <span className="properties-value status-last-message">{lastMessage ?? "—"}</span>
       </div>
       <p className="status-caption">Click an anchor on the map to take it offline/online (fault demo).</p>

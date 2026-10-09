@@ -34,8 +34,8 @@ export default function CameraModal({ alert, action, onConfirm, onCancel }: Came
         onClick={(e) => e.stopPropagation()}
       >
         <div className="camera-modal-header">
-          <h3 id="camera-modal-title">📷 AI CAMERA — {alert.zoneName}</h3>
-          <span className="camera-modal-live">● PLACEHOLDER</span>
+          <h3 id="camera-modal-title">AI camera · {alert.zoneName}</h3>
+          <span className="camera-modal-live">Placeholder</span>
         </div>
 
         <div className="camera-feed-placeholder">Insert camera video feed</div>

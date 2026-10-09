@@ -156,7 +156,7 @@ export default function App() {
   }, []);
 
   // Initial load from the backend (the authoritative zone store) and a
-  // periodic health poll driving the BACKEND: CONNECTED/OFFLINE indicator.
+  // periodic health poll driving the backend connected/offline indicator.
   useEffect(() => {
     let cancelled = false;
 
@@ -312,14 +312,14 @@ export default function App() {
   const pendingAlerts = events.filter((e) => e.requiresAck && e.ackStatus === "PENDING");
 
   const backendLabel =
-    backendOnline === null ? "BACKEND: CHECKING..." : backendOnline ? "BACKEND: CONNECTED" : "BACKEND: OFFLINE";
+    backendOnline === null ? "Checking backend…" : backendOnline ? "Backend connected" : "Backend offline";
   const backendClass =
     backendOnline === null ? "backend-badge checking" : backendOnline ? "backend-badge online" : "backend-badge offline";
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>UWB CONSTRUCTION SAFETY DEMO</h1>
+        <h1>UWB Construction Safety Demo</h1>
         <div className="header-badges">
           <a
             className={`supervisor-badge${pendingAlerts.length > 0 ? " pending" : ""}`}
@@ -328,11 +328,11 @@ export default function App() {
             rel="noopener"
             title="Open the supervisor console (alerts + event log) in a new window"
           >
-            SUPERVISOR: {pendingAlerts.length} PENDING ↗
+            Supervisor · {pendingAlerts.length} pending ↗
           </a>
           <span className={backendClass}>{backendLabel}</span>
           <span className="mode-badge">
-            {mode === "setup" ? "ZONE SETUP MODE" : "LIVE SIMULATION MODE"}
+            {mode === "setup" ? "Zone setup" : "Live simulation"}
           </span>
         </div>
       </header>
@@ -350,6 +350,12 @@ export default function App() {
 
       <div className="main-area">
         <div className="map-area">
+          {mode === "setup" && zones.length === 0 && (
+            <div className="first-run-hint">
+              <strong>Start by marking a hazard</strong>
+              <span>Draw a Rectangle or Circle zone, or place a Moving plant, then start the simulation.</span>
+            </div>
+          )}
           <SiteMap
             zones={zones}
             selectedZoneId={selectedZoneId}
@@ -383,7 +389,7 @@ export default function App() {
             <StatusPanel
               tagId={TAG_ID}
               state={geofenceResult?.state ?? null}
-              zoneId={geofenceResult?.zoneId ?? null}
+              zoneName={zones.find((z) => z.id === geofenceResult?.zoneId)?.name ?? null}
               degraded={geofenceResult?.degraded ?? false}
             />
 
@@ -397,14 +403,30 @@ export default function App() {
             />
 
             <div className="properties-panel">
-              <h3>LIVE SIMULATION MODE</h3>
-              <p className="properties-empty">
-                This mode locks the zone geometry, lets you drive TAG-001
-                around the site, and sends the UWB-estimated position to
-                the backend for the authoritative SAFE/WARNING/BREACH
-                check. Alerts and the event log are on the
-                supervisor console (header link).
-              </p>
+              <h3>Simulation</h3>
+              <p className="properties-empty">Drive TAG-001 with WASD or the arrow keys.</p>
+
+              <label className="properties-row">
+                <span>UWB noise</span>
+                <input
+                  type="checkbox"
+                  checked={noiseEnabled}
+                  onChange={(e) => setNoiseEnabled(e.target.checked)}
+                />
+              </label>
+              <label className="properties-row">
+                <span>Show UWB estimate</span>
+                <input
+                  type="checkbox"
+                  checked={showEstimate}
+                  onChange={(e) => setShowEstimate(e.target.checked)}
+                />
+              </label>
+
+              {/* Debug readouts: useful when explaining the pipeline, but not
+                  the headline, so they start collapsed. */}
+              <details className="diagnostics">
+                <summary>UWB diagnostics</summary>
               <div className="properties-row">
                 <span>Ground truth</span>
                 <span className="properties-value">
@@ -416,7 +438,7 @@ export default function App() {
                 <span className="properties-value">
                   {estimatedPosition
                     ? `X ${estimatedPosition.x.toFixed(2)} m, Y ${estimatedPosition.y.toFixed(2)} m`
-                    : "POSITION UNAVAILABLE"}
+                    : "Position unavailable"}
                 </span>
               </div>
               {positionErrorM !== null && (
@@ -426,30 +448,14 @@ export default function App() {
                 </div>
               )}
 
-              <label className="properties-row">
-                <span>UWB Noise</span>
-                <input
-                  type="checkbox"
-                  checked={noiseEnabled}
-                  onChange={(e) => setNoiseEnabled(e.target.checked)}
-                />
-              </label>
-              <label className="properties-row">
-                <span>Show UWB Estimate</span>
-                <input
-                  type="checkbox"
-                  checked={showEstimate}
-                  onChange={(e) => setShowEstimate(e.target.checked)}
-                />
-              </label>
-
-              <h3 className="ranges-heading">UWB RANGES (sim.)</h3>
+              <h3 className="ranges-heading">Simulated anchor ranges</h3>
               {anchorRanges.map((r) => (
                 <div className="properties-row" key={r.anchorId}>
                   <span>{r.anchorId}</span>
                   <span className="properties-value">{r.distance.toFixed(2)} m</span>
                 </div>
               ))}
+              </details>
             </div>
           </div>
         )}
@@ -467,12 +473,12 @@ export default function App() {
             onClick={handleStartSimulation}
             title={hasActiveZone ? "" : "Create at least one active zone first"}
           >
-            START SIMULATION
+            Start simulation
           </button>
         )}
         {mode === "live" && (
           <button className="start-simulation-btn end-simulation-btn" onClick={handleEndSimulation}>
-            END SIMULATION
+            End simulation
           </button>
         )}
       </footer>
